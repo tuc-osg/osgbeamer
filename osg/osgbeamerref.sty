@@ -185,21 +185,21 @@ hyperref
     % #3: Label
     % #4: Property
     \ifstrempty{#1}{% lokale Referenz, wenn nichts angegeben
-      \zref@extract{#3}{#4}%
+      \hyperlink{\zref@extract{\omr@fullprefix{\beamer@currentlecturelabel}:#3}{anchor}}{\zref@extract{#3}{#4}}%
     }{% Angabe eines Kapitellabels
       \IfNoValueTF{#2}{%
         \ifcsstring{beamer@currentlecturelabel}{#1}{% entspricht eigenem Label, ebenfalls lokal
-              \zref@extract{#3}{#4}%
+              \hyperlink{\zref@extract{\omr@fullprefix{#1}:#3}{anchor}}{\zref@extract{#3}{#4}}%
         }{% Protokolliere, welches Kapitel nachgefragt wurde.
           % Dessen aux-Datei wird (so eine vorliegt) im nächsten
           % Durchlauf über \omrexternaldocument geladen.
           % Sammlung erfolgt über die (interne) Liste osg@externrefs
         \write\@mainaux{\string\addtolistcs{osg@externrefs}{\omr@fullprefix{#1}}}%
-        \zref@extract{\omr@fullprefix{#1}:#3}{#4}%
+        \hyperlink{\zref@extract{\omr@fullprefix{#1}:#3}{anchor}}{\zref@extract{\omr@fullprefix{#1}:#3}{#4}}%
          }%
       }{% Bei Intertyp-Referenzen muss Kapitel ebenfalls protokolliert werden
         \write\@mainaux{\string\addtolistcs{osg@externrefs}{\omr@fullprefix[#2]{#1}}}%
-        \zref@extract{\omr@fullprefix[#2]{#1}:#3}{#4}%
+        \hyperlink{\zref@extract{\omr@fullprefix[#2]{#1}:#3}{anchor}}{\zref@extract{\omr@fullprefix[#2]{#1}:#3}{#4}}%
       }%
     }%
   }%
@@ -483,7 +483,7 @@ hyperref
      }
    }
 
-   \newcommand<>{\osglabel}[1]{\beamer@savemode\only#2{\zref@label{#1}}\beamer@resumemode}
+   \newcommand<>{\osglabel}[1]{\beamer@savemode\only#2{\expandafter\hypertarget{\beamer@currentlecturelabel:#1}{\zref@label{#1}}}\beamer@resumemode}
 
    % Definiere \omrcpath als den Dateienpfad (ohne Extension) für das angegebene Kapitel
    \NewDocumentCommand\getPathForChapter{om}{%
