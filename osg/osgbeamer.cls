@@ -82,12 +82,12 @@
       -- Wenn Datei gefunden, wird osgllm-Flag gesetzt 
       tex.print("\\booltrue{osgllm}")
       -- Defaultwerte für OLLM
-      sh_path = "../Ref"
-      cfg_file = "lectdates"
-      fst_chap_a = "1"
-      fst_chap_b = "1"
-      -- curr_dir hat keinen Defaultwert, wird direkt gesetzt
-      cur_dir = lfs.currentdir() 
+      local sh_path = "../Ref"
+      local cfg_file = "lectdates"
+      local fst_chap_a = "1"
+      local fst_chap_b = "1"
+      -- Ermittelt das aktuelle Directory (ohne Pfad: alles ab dem letzten Slash)
+      cur_dir = string.match(lfs.currentdir(),"[^/]+$") 
       -- Die anderen Werte werden aus der Konfigurationsdatei geholt.
       for line in (io.lines("../ollmconfig.pl")) do
         if string.sub(line,1,1) ~= "#" then
