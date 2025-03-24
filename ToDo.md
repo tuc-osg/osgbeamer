@@ -4,7 +4,7 @@
   * [ ] Unabhängigkeit von tucbeamer (nur default)
   * [ ] Unabhängiges Einbinden bei möglichst vielen der Einzelpaketen
     ermöglichen
-  * [ ] saubere Standalone-Lösung (sollte *ohne* OLLM funktionieren)
+  * [ ] saubere Standalone-Lösung (sollte *ohne* OLLM funktxionieren)
 * [ ] zref vollständig durch hyperref ersetzen
 * Möglichst viel Funktionalität aus OLLM in die Klasse.
   * [ ] Startnummern von ollmconfig.pl nach lectdates.tex
@@ -23,6 +23,8 @@
 - Sollte möglicht viel der Series-Funktionalität haben, außer
    - Crossreferenzen
    - Cross-Literaturreferenzen
-	  
-
+- Entscheidungsbaum für Standalone:
+   - ollm standalone oder standalone-Klassoption => standalone-Modus
+   - Prüfung der Directory-Stuktur/Configuration, wenn nicht ausreichend => Fehlermeldung 
+   - sonst OLLM-Modus
 
