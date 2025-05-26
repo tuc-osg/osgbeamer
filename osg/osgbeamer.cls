@@ -38,10 +38,9 @@
 \fi
 \RequirePackage{etoolbox,auxhook}
 % Die nächsten beiden Zeilen dienen nur dafür, dass mein Editor die
-% etoolbox-if nicht dauernd mit TeX-if verwechselt.
+% etoolbox-ifs nicht dauernd mit TeX-ifs verwechselt.
 \let\IfBool=\ifbool 
 \let\IfToggle=\iftoggle
-% \if's verwechselt...
 
 \RequirePackage{varsfromjobname}
 \RequirePackage{luacode}
@@ -71,6 +70,30 @@
 \newbool{osgllm}\boolfalse{osgllm}
 \newbool{osglangset}\boolfalse{osglangset}
 \newbool{osgdoctypeset}\boolfalse{osgdoctypeset}
+% Überprüfe Bedingungen für OLLM
+\begin{luacode}
+-- lfs wird für currentdir() benötigt
+require("lfs")
+-- Korrekt geformter Verzeichnisname?
+local res = string.find(lfs.currentdir(),"%d%d%d[ab]?%-[^/]+$")
+if res ~= nil then
+   -- Korrekt geformter Jobname?
+   res = string.find(\luastring{\jobname},"[^-]+%-[^-]+%-[^-]+%-[^-]+%-[^-]+")
+   if res ~= nil then
+      res = io.open("../ollmconfig.pl","r")      
+      if res ~= nil then
+	 -- Konfigurationsdatei vorhanden?
+	 tex.print("\\booltrue{osgllm}")
+      else
+	 tex.sprint("\\ClassWarningNoLine{\\classname}{No OLLM config file found.}")
+      end
+   else
+      tex.sprint("\\ClassWarningNoLine{\\classname}{No proper job name for OLLM}")
+   end
+else
+   tex.print("\\ClassWarningNoLine{\\classname}{No proper directory name for OLLM}")
+end
+\end{luacode}
 \begin{luacode*}
   -- lfs wird für currentdir() benötigt
   require("lfs")
@@ -147,7 +170,7 @@
 %
 % Durch das neue Key-Value-interface von LaTeX ab Juni 2022 können (wie in
 % pgfkeys oder Koma-Script Klassenoptionen ggf. auch noch später gesetzt
-% werden (so sie nicht vor der ersten Seitenserstellung gebraucht werden).
+% werden (so sie nicht vor der ersten Seitenerstellung gebraucht werden).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \DeclareKeys[osgbeamer]{
   % Soll die Kompatibilität zur alten osgbeamer-Klasse erhöhen (z.Z. nicht genutzt)
@@ -646,6 +669,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
 % Im Original geht Beamer nur von Parts und Sections aus.
 % Bei osgbeamer entspricht jede Lecture einem Kapitel.
+% 
 % Entsprechend werden die Zähler zusammengelegt.
 \RequirePackage{aliascnt}
 \mode<article>{\newaliascnt{lecture}{chapter}}
