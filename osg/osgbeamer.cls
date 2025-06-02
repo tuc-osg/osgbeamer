@@ -7,7 +7,7 @@
 % Beamer- und Script-Template für die Professur Betriebssysteme an
 % der TU Chemnitz
 %
-% (c) Matthias Werner (matthias.werner@informatik.tu-chemnitz.de), 2022-2024
+% (c) Matthias Werner (matthias.werner@informatik.tu-chemnitz.de), 2022-2025
 %
 % Dieses Material steht unter der Creative-Commons-Lizenz CC BY-SA 4.0
 % (Namensnennung - Weitergabe unter gleichen Bedingungen).
@@ -37,13 +37,43 @@
  }{Use this class with LuaLaTex.}
 \fi
 \RequirePackage{etoolbox,auxhook}
-% Die nächsten beiden Zeilen dienen nur dafür, dass mein Editor die
-% etoolbox-ifs nicht dauernd mit TeX-ifs verwechselt.
-\let\IfBool=\ifbool 
-\let\IfToggle=\iftoggle
+\RequirePackage{luacode}
+\newbool{osgllm}\boolfalse{osgllm}
+% Überprüfe Bedingungen für OLLM
+\begin{luacode}
+-- lfs wird für currentdir() benötigt
+require("lfs")
+-- Korrekt geformter Verzeichnisname?
+local res = string.find(lfs.currentdir(),"%d%d%d[ab]?%-[^/]+$")
+if res ~= nil then
+   -- Korrekt geformter Jobname?
+   res = string.find(\luastring{\jobname},"[^-]+%-[^-]+%-[^-]+%-[^-]+%-[^-]+")
+   if res ~= nil then
+      res = io.open("../ollmconfig.pl","r")      
+      if res ~= nil then
+        -- Konfigurationsdatei vorhanden?
+        for line in (io.lines("../ollmconfig.pl")) do
+        if string.sub(line,1,1) ~= "#" then
+           -- Nichtkommentarzeile, versuche parsen
+           v = string.match(line,"$lectconfig%s-=%s-'%S';")
+           tex.sprint("\\newcommand\\osgLectConfig{',v,'}")
+	      tex.print("\\booltrue{osgllm}")
+      else
+	 tex.sprint("\\ClassWarningNoLine{\\classname}{No OLLM config file found.}")
+      end
+   else
+      tex.sprint("\\ClassWarningNoLine{\\classname}{No proper job name for OLLM}")
+   end
+else
+   tex.print("\\ClassWarningNoLine{\\classname}{No proper directory name for OLLM}")
+end
+\end{luacode}
+% brauchen wir die?
+\newbool{osglangset}\boolfalse{osglangset}
+\newbool{osgdoctypeset}\boolfalse{osgdoctypeset}
+
 
 \RequirePackage{varsfromjobname}
-\RequirePackage{luacode}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % OSG LaTeX Lecture Maker
 % =======================
@@ -67,33 +97,7 @@
 % 'ollmconfig.pl' im Elternverzeichnis festgestellt und im Flag 'osgllm'
 % gespeichert. Dann wird davon ausgegangen, dass ein korrektes
 % Verzeichnis-Layout existiert.
-\newbool{osgllm}\boolfalse{osgllm}
-\newbool{osglangset}\boolfalse{osglangset}
-\newbool{osgdoctypeset}\boolfalse{osgdoctypeset}
-% Überprüfe Bedingungen für OLLM
-\begin{luacode}
--- lfs wird für currentdir() benötigt
-require("lfs")
--- Korrekt geformter Verzeichnisname?
-local res = string.find(lfs.currentdir(),"%d%d%d[ab]?%-[^/]+$")
-if res ~= nil then
-   -- Korrekt geformter Jobname?
-   res = string.find(\luastring{\jobname},"[^-]+%-[^-]+%-[^-]+%-[^-]+%-[^-]+")
-   if res ~= nil then
-      res = io.open("../ollmconfig.pl","r")      
-      if res ~= nil then
-	 -- Konfigurationsdatei vorhanden?
-	 tex.print("\\booltrue{osgllm}")
-      else
-	 tex.sprint("\\ClassWarningNoLine{\\classname}{No OLLM config file found.}")
-      end
-   else
-      tex.sprint("\\ClassWarningNoLine{\\classname}{No proper job name for OLLM}")
-   end
-else
-   tex.print("\\ClassWarningNoLine{\\classname}{No proper directory name for OLLM}")
-end
-\end{luacode}
+
 \begin{luacode*}
   -- lfs wird für currentdir() benötigt
   require("lfs")
@@ -224,11 +228,12 @@ end
   },
   % Die ggf. durch OLLM gegeben Konfigurationen werden
   % ignoriert. Erzwingt den Standalone-Modus
+  % DEPRECATED
   noollm.code = {
     \booltrue{osgoptionstandalone}
-    \undef{\ollm}
-    \boolfalse{osgllm}
-    \ClassInfo{\classname}{OLLM disabled or not detected, deactivate OLLM features}
+    %\undef{\ollm}
+    %\boolfalse{osgllm}
+    \ClassInfo{\classname}{The 'oollm' option is deprecated and will be ignored.\MessageBreak Maybe you want to use 'standalone'}
   },
   % Optionen, die sinnvolle Einstellungen für die OSG zusammenfassen
   osgdefaults.code = {
@@ -263,7 +268,7 @@ end
   % * handout => mehrere (Standard:4) Slides auf einem Blatt,
   % * screen  => Slides mit Kommentaren und Vorschau für die
   %              Vorführung (z.Z. nicht richtig unterstützt)
-  % * script  => Kapitel eines Scripts
+  % * script/article  => Kapitel eines Scripts
   % * web     => Scriptkapitel in HTML (z.Z. nicht unterstützt)
   %
   % In der Regel sollte diese Option unter OLLM nicht per Hand gesetzt werden.
@@ -337,18 +342,6 @@ end
 }
 \ExplSyntaxOff
 
-% In \ollm werden die Pfade zum Verzeichnis für gemeinsame Daten (für
-% vorlesungsübergreifende Referenzierung), der eigene Verzeichnisname
-% sowie die erste logische Kapitelnummer (i.d.R. 0 oder 1) übergeben.
-\IfBool{osgllm}{
-  \ClassInfo{\classname}{Acivated OLLM}  
-}{
-  \boolfalse{osgllm}
-  % Ohne OLLM ist das Dokument alleinstehend (standalone), auch
-  % wenn dies nicht explizit als Option angegeben wurde.
-  \ClassInfo{\classname}{Osgbeamer without OLLM, activate standalone}  
-  \SetKeys{standalone=true} 
-}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Default-Einstellungen:
 %
@@ -397,6 +390,8 @@ end
 % 
 % Um Klassen-Optionen für *alle* Kapitel/Lectures gemeinsam setzen zu können,
 % soll die 'lectdate.tex' bereits jetzt eingelesen werden.
+% Dies ist spekulativ: Evtl. hat der Autor 'standalone' gesetzt, dann ist es möglich, 
+% dass es keine Datei 'lectdate.tex' gibt, 
 % Dort werden die Macros \SetGlobalClassOptions und
 % \EnforceGlobalClassOptions zur Verfügung gestellt.
 \let\SetGlobalClassOptions=\SetKeys
@@ -462,8 +457,8 @@ end
   % ausgewertet. lectdates.tex wird also auch geladen, wenn OLLM korrekte
   % Verzeichnisstrukturen vorfindet und der Nutzer nicht 'standalone' 
   % als OLLM-Option übergibt, sondern nur als Klassenoption
-  \ollm % Definiert \OsgShareDataPath, \OsgLectConfig und \OsgFirstChapter
-  \expandafter\InputIfFileExists{\OsgLectConfig}{
+  %\ollm % Definiert \OsgShareDataPath, \OsgLectConfig und \OsgFirstChapter
+  \expandafter\InputIfFileExists{\osgLectConfig}{
     \osg@makedelayed*{author}
     \osg@makedelayed*{date}
     \osg@makedelayed*{course}
@@ -474,9 +469,9 @@ end
     \osg@makedelayed{input}
     \let\SetGlobalClassOptions=\SetKeys
   }{
-    \ClassWarning{\classname}{'\OsgLectConfig' not found.}
+    \ClassWarning{\classname}{'\osgLectConfig' not found.}
   }
-  \expandafter\IfFileExists{\OsgLectConfig}{
+  \expandafter\IfFileExists{\osgLectConfig}{
     \osg@restoredelayed{author}
     \osg@restoredelayed{date}
     \osg@restoredelayed{course}
@@ -496,6 +491,13 @@ end
 \osg@forceoptionhook % ... die wiederum durch \EnforceGlobalClassOptions überschrieben
                      % werden können, da im Hook \osg@forceoptionhook Key-Settings
                      % gesammelt worden, und hier *nach* \Processoptions ausgeführt werden.
+\ifbool{osgoptionstandalone}{}{
+  \ifbool{osgllm}{
+    \ClassError{}
+  }{}
+}
+
+
 \IfBool{osgllm}{
   % Bei OLLM werden Sprache und Dokumentart aus dem Jobnamen geholt, so sie noch
   % nicht per Option gesetzt sind.
@@ -506,6 +508,18 @@ end
     \SetKeyEx{osgbeamer}{doctype=\getthreefromjobname}
   }
 }{}
+% In \ollm werden die Pfade zum Verzeichnis für gemeinsame Daten (für
+% vorlesungsübergreifende Referenzierung), der eigene Verzeichnisname
+% sowie die erste logische Kapitelnummer (i.d.R. 0 oder 1) übergeben.
+\IfBool{osgllm}{
+  \ClassInfo{\classname}{Acivated OLLM}  
+}{
+  \boolfalse{osgllm}
+  % Ohne OLLM ist das Dokument alleinstehend (standalone), auch
+  % wenn dies nicht explizit als Option angegeben wurde.
+  \ClassInfo{\classname}{Osgbeamer without OLLM, activate standalone}  
+  \SetKeys{standalone=true} 
+}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Basisklasse

@@ -4,14 +4,14 @@
   * [ ] Unabhängigkeit von tucbeamer (nur default)
   * [ ] Unabhängiges Einbinden bei möglichst vielen der Einzelpaketen
     ermöglichen
-  * [ ] saubere Standalone-Lösung (sollte *ohne* OLLM funktxionieren)
+  * [ ] saubere Standalone-Lösung (sollte *ohne* OLLM funktionieren)
 * [ ] zref vollständig durch hyperref ersetzen
 * Möglichst viel Funktionalität aus OLLM in die Klasse.
   * [ ] Startnummern von ollmconfig.pl nach lectdates.tex
 * In OLLM bleibt:
   * Generierung von Jobnamen für Wahl von
     - Dokumententyp
-	- Sprache
+	  - Sprache
 	  
 ## Serien-Mode (OLLM-Mode)
 - Aus `ollmconfig.pl` verschwindet
