@@ -38,40 +38,43 @@
 \fi
 \RequirePackage{etoolbox,auxhook}
 \RequirePackage{luacode}
+\newtoggle{ollmdirstruct}\togglefalse{ollmdirstruct} % Valider Verzeichnisname?
+\newtoggle{ollmconfig}\togglefalse{ollmconfig}       % Configurationsdatei verhanden?
+\newtoggle{ollmjobname}\togglefalse{ollmjobname}     % Ollm-Jobname? 
+
 \newbool{osgllm}\boolfalse{osgllm}
 % Überprüfe Bedingungen für OLLM
+\
 \begin{luacode}
 -- lfs wird für currentdir() benötigt
 require("lfs")
 -- Korrekt geformter Verzeichnisname?
 local res = string.find(lfs.currentdir(),"%d%d%d[ab]?%-[^/]+$")
 if res ~= nil then
-   -- Korrekt geformter Jobname?
-   res = string.find(\luastring{\jobname},"[^-]+%-[^-]+%-[^-]+%-[^-]+%-[^-]+")
-   if res ~= nil then
-      res = io.open("../ollmconfig.pl","r")      
-      if res ~= nil then
-        -- Konfigurationsdatei vorhanden?
-        for line in (io.lines("../ollmconfig.pl")) do
-        if string.sub(line,1,1) ~= "#" then
-           -- Nichtkommentarzeile, versuche parsen
-           v = string.match(line,"$lectconfig%s-=%s-'%S';")
-           tex.sprint("\\newcommand\\osgLectConfig{',v,'}")
-	      tex.print("\\booltrue{osgllm}")
-      else
-	 tex.sprint("\\ClassWarningNoLine{\\classname}{No OLLM config file found.}")
-      end
-   else
-      tex.sprint("\\ClassWarningNoLine{\\classname}{No proper job name for OLLM}")
-   end
-else
-   tex.print("\\ClassWarningNoLine{\\classname}{No proper directory name for OLLM}")
+   tex.print("\\toggletrue{ollmdirstruct}")
+end   
+-- Korrekt geformter Jobname?
+res = string.find(\luastring{\jobname},"[^-]+%-[^-]+%-[^-]+%-[^-]+%-[^-]+")
+if res ~= nil then
+   tex.print("\\toggletrue{ollmjobname}")
 end
+-- Konfigurationsdatei vorhanden?
+res = io.open("../ollmconfig.pl","r")      
+if res ~= nil then
+   tex.print("\\toggletrue{ollmconfig}")
+   -- Bestmmung der LaTeX-Konfigurationsdatei
+   for line in (io.lines("../ollmconfig.pl")) do
+      if string.sub(line,1,1) ~= "#" then
+      -- Nichtkommentarzeile, versuche parsen
+         v = string.match(line,"$lectconfig%s-=%s-'%S';")
+         tex.sprint("\\newcommand\\osgLectConfig{',v,'}")
+      end
+   end
+end      
 \end{luacode}
 % brauchen wir die?
-\newbool{osglangset}\boolfalse{osglangset}
-\newbool{osgdoctypeset}\boolfalse{osgdoctypeset}
-
+\newtoggle{osglangset}\togglefalse{osglangset}
+\newtoggle{osgdoctypeset}\togglefalse{osgdoctypeset}
 
 \RequirePackage{varsfromjobname}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -159,11 +162,11 @@ end
 \newtoggle{osgscript}         % Wird bis zum Laden von Beamer als Unterscheidung
                               % von presentation- und article-Mode genutzt
 
-\newbool{osgoptionstandalone} % Zeigt die Nutzung der Klasse außerhalb einer
-                              % Lecture-Serie an
+%\newtoggle{osgoptionstandalone} % Zeigt die Nutzung der Klasse außerhalb einer
+%                              % Lecture-Serie an
 
-\newbool{osglegacy}           % Zeigt die Nutzung des "Kompatibilitätsmodus" an
-\boolfalse{osglegacy}         
+%\newbool{osglegacy}           % Zeigt die Nutzung des "Kompatibilitätsmodus" an
+%\boolfalse{osglegacy}         
 \newbool{osgforcetoc}         % Legt eine Inhaltsverzeichnisdatei an, ohne ein 
 \booltrue{osgforcetoc}        % entsprechendes Verzeichnis zu generieren
 \newbool{osgbib}              % true lädt osgbeamerbib.sty
@@ -177,10 +180,20 @@ end
 % werden (so sie nicht vor der ersten Seitenerstellung gebraucht werden).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \DeclareKeys[osgbeamer]{
-  % Soll die Kompatibilität zur alten osgbeamer-Klasse erhöhen (z.Z. nicht genutzt)
+  % Eine Standalone-Präsentation ist nicht Teil einer Serie
+  standalone.if = osgoptionstandalone,
+  standalone.code = {
+    \ifosgoptionstandalone
+        \ClassInfoNoLine{\classname}{Activate standalone mode}
+    \fi
+  }
+  standalone.usage = preamble,
+  % Soll die Kompatibilität zur alten osgbeamer-Klasse erhöhen
+  legacy.if = osglegacy,
   legacy.code={
-    \ClassWarning{\classname}{Legacy mode activated}
-    \booltrue{osglegacy}
+    \ifosglegacy
+        \ClassWarning{\classname}{Legacy mode activated}
+    \fi    
   },
   % Optionen, die an die beamer-Klasse weitergeleitet werden.
   beamer.code = {
@@ -214,26 +227,10 @@ end
     \PassOptionsToPackage{#1}{osgbeamerbib}
   },
   % Werden Seiten kapitelübergreifend numeriert?
-  continuation.code={
-    \PassOptionsToClass{continuation=#1}{osgbeamerref}
-  },
+  continuation. pass-to-packages= osgbeamerref
+  % 
   docid.code = {
     \PassOptionsToClass{docid=#1}{osgbeamerref}
-  },
-  % Eine Standalone-Präsentation ist nicht Teil einer Serie
-  standalone.code = {
-    \booltrue{osgoptionstandalone}
-    \PassOptionsToPackage{standalone}{osgbeamerref}
-    \PassOptionsToPackage{standalone}{osgbeamerbib}
-  },
-  % Die ggf. durch OLLM gegeben Konfigurationen werden
-  % ignoriert. Erzwingt den Standalone-Modus
-  % DEPRECATED
-  noollm.code = {
-    \booltrue{osgoptionstandalone}
-    %\undef{\ollm}
-    %\boolfalse{osgllm}
-    \ClassInfo{\classname}{The 'oollm' option is deprecated and will be ignored.\MessageBreak Maybe you want to use 'standalone'}
   },
   % Optionen, die sinnvolle Einstellungen für die OSG zusammenfassen
   osgdefaults.code = {
@@ -242,24 +239,11 @@ end
     \SetLogo{OSG-Logo}
     \PassOptionsToClass{professionalfonts}{beamer}
   },
-  final.code{
-    \PassOptionsToPackage{final}{osgbeamerref}
-    \PassOptionsToClass{final}{beamer}
-    \PassOptionsToPackage{final}{scrbook}
-  }
+  % 
+  draft.code =  pass-to-packages={osgbeamerref,beamer,scrbook,graphicx},
   noforcetoc.code = {
     \boolfalse{osgforcetoc}
-  }
-}
-% Da Choice-Keys benötigt werden, die noch nicht nach LaTeX2e
-% zurückportiert wurden, wird LaTeX3 benötigt. Daher wird auf die
-% alternative Syntax umgestellt. Ein explizites Laden eines
-% LaTeX3-Pakets ist nicht nötig, da die aktuelle LaTeX-Version auf
-% LaTeX3 beruht.
-\ExplSyntaxOn
-\cs_generate_variant:Nn \keys_set:nn { nx } % SetKey mit Expansion der Werteargumente
-\let\SetKeyEx=\keys_set:nx                  % Alias mit LaTeX2e-Syntax
-\keys_define:nn {osgbeamer}{
+  },
   % Doctype
   % =======
   %
@@ -267,47 +251,69 @@ end
   % * slides  => Foliensatz,
   % * handout => mehrere (Standard:4) Slides auf einem Blatt,
   % * screen  => Slides mit Kommentaren und Vorschau für die
-  %              Vorführung (z.Z. nicht richtig unterstützt)
+  %              Vorführung (z.Z. nicht unterstützt)
   % * script/article  => Kapitel eines Scripts
   % * web     => Scriptkapitel in HTML (z.Z. nicht unterstützt)
   %
   % In der Regel sollte diese Option unter OLLM nicht per Hand gesetzt werden.
   doctype .choice: ,
-  doctype/slides .code:n={
+  doctype/slides .code:n={%
     \booltrue{osgdoctypeset}
     \gdef\osgparentclass{beamer}
     \PassOptionsToPackage{doctype=slides}{osgbeamerref}
     \togglefalse{osgscript}
   },
-  doctype/handout .code:n={
+  doctype/handout .code:n={%
     \booltrue{osgdoctypeset}
     \PassOptionsToClass{handout}{beamer}
     \PassOptionsToPackage{doctype=handout}{osgbeamerref}
     \togglefalse{osgscript}
   },
-  doctype/script .code:n={
+  doctype/script .code:n={%
     \booltrue{osgdoctypeset}
     \PassOptionsToPackage{doctype=script}{osgbeamerref}
     \toggletrue{osgscript}
   },
-  doctype/article .code:n={
+  doctype/article .code:n={%
     \booltrue{osgdoctypeset}
     \PassOptionsToPackage{doctype=script}{osgbeamerref}
     \toggletrue{osgscript}
   },
-  doctype/screen .code:n={
+  doctype/screen .code:n={%
     \booltrue{osgdoctypeset}
+    \ClassWarning{\classname}{Document type 'screen' is currently not fully supported.}
     \PassOptionsToClass{second}{beamer}
     \PassOptionsToPackage{doctype=slides}{osgbeamerref}
     \togglefalse{osgscript}
   },
-  doctype/web .code:n={
+  doctype/web .code:n={%
     % \PassOptionsToClass{second}{beamer}
     \booltrue{osgdoctypeset}
-    \ClassError{\classname}{Document type 'web' is not supported.}
+    \ClassError{\classname}{Document type 'web' is currently not supported.}
     %\toggletrue{osgscript}
     %\toggletrue{osgweb}
   },
+  % Mit der Option 'handout format' kann angegeben werden, wieviel Folien
+  % auf einer A4 Seite dargestellt werden.
+  % Es gibt die Auswahl zwischen '2 on 1', '4 on 1' und '6 on 1'
+  handout format.choice:,
+  handout format/2 on 1 .code ={%
+    \gdef\osg@pgfpageoptions{{2 on 1}[a4paper, border shrink=2mm]}
+  },
+  handout~format/4 on 1 .code ={%
+    \gdef\osg@pgfpageoptions{{4 on 1}[a4paper, landscape, border shrink=2mm]}
+  },
+  handout~format/6~on~1 .code ={%
+    \gdef\osg@pgfpageoptions{{6 on 1}[a4paper, border shrink=2mm]}
+  },
+
+}
+
+\ExplSyntaxOn
+\cs_generate_variant:Nn \keys_set:nn { nx } % SetKey mit Expansion der Werteargumente
+\let\SetKeyEx=\keys_set:nx                  % Alias mit LaTeX2e-Syntax
+\keys_define:nn {osgbeamer}{
+
   % Die Sprache _kann_ explizit mit der Option lang=<lang> gesetzt werden, jedoch
   % sollte dies primär im 'standalone'-Mode genutzt werden
   % Im OLLM wird die entsprechende Sprache i.d.R. über den Jobnamen
@@ -326,19 +332,7 @@ end
     \PassOptionsToPackage{english}{translator}
   },
   
-  % Mit der Option 'handout format' kann angegeben werden, wieviel Folien
-  % auf einer A4 Seite dargestellt werden.
-  % Es gibt die Auswahl zwischen '2 on 1', '4 on 1' und '6 on 1'
-  handout~format.choice:,
-  handout~format/2~on~1 .code ={
-    \gdef\osg@pgfpageoptions{{2~on~1}[a4paper, border~shrink=2mm]}
-  },
-  handout~format/4~on~1 .code ={
-    \gdef\osg@pgfpageoptions{{4~on~1}[a4paper, landscape, border~shrink=2mm]}
-  },
-  handout~format/6~on~1 .code ={
-    \gdef\osg@pgfpageoptions{{6~on~1}[a4paper, border~shrink=2mm]}
-  },
+
 }
 \ExplSyntaxOff
 
