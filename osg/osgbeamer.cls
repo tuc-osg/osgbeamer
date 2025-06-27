@@ -54,8 +54,9 @@ if res ~= nil then
    tex.print("\\toggletrue{ollmdirstruct}")
 end   
 -- Korrekt geformter Jobname?
-res = string.find(\luastring{\jobname},"[^-]+%-[^-]+%-[^-]+%-[^-]+%-[^-]+")
-if res ~= nil then
+res = string.find(\luastring{\jobname},"[^-]+%-%d%d%d%-(slides|handout|script|screen)+%-%a%a%-[^-]+")
+local res2 = string.find(\luastring{\jobname},"[^-]+%-(slides|handout|script|screen)%-%a%a%-[^-]+")
+if res ~= nil or res2 ~= nil then
    tex.print("\\toggletrue{ollmjobname}")
 end
 -- Konfigurationsdatei vorhanden?
@@ -81,12 +82,11 @@ end
 % OSG LaTeX Lecture Maker
 % =======================
 % 
-% Das OSG LaTeX lecture maker system (OLLM system) steht teilweise über den
-% Klassenoptionen. Im OLLM System werden an die Klasse durch den Jobnamen und 
+% Das OSG LaTeX lecture maker system (OLLM system) ersetzt teilweise die
+% Klassenoptionen. Im OLLM werden an die Klasse durch den Jobnamen und 
 % durch vordefinierte Macros Informationen übergeben. Macros und Jobnamen werden
 % durch das `latexmkrc` aufgearbeitet.
-% Der Jobname ist wie folgt aufgebaut und wird ausgewertet, wenn das Macro
-% `ollm` definiert ist.
+% Der Jobname ist für eine Lehreinheit / ein Kapitel wie folgt aufgebaut:
 %
 % <lectureprefix>-<number>-<doctype>-<language>-<topic>
 %
@@ -96,11 +96,12 @@ end
 % * <language>     : de oder en (für deutsch oder englisch)
 % * <topic>        : wahlfreie Bezeichnung für das Kapitelthema
 %
-% Ob das OLLM System aktiv ist, wird anhand des Vorhandenseins des der Datei
-% 'ollmconfig.pl' im Elternverzeichnis festgestellt und im Flag 'osgllm'
-% gespeichert. Dann wird davon ausgegangen, dass ein korrektes
-% Verzeichnis-Layout existiert.
-
+% Mit Hilfe von osgcombine.sty kann ein Script oder ein kompletter Foliensatz
+% des gesamten Kurses erstellt werden. In diesem Fall ist der Jobname
+%
+% <lectureprefix>-<doctype>-<language>
+%
+% 
 \begin{luacode*}
   -- lfs wird für currentdir() benötigt
   require("lfs")
