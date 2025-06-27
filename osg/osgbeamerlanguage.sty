@@ -3,25 +3,29 @@
 \ProvidesPackage{\packagename}[2025/08/25 v0.5]
 \RequirePackage{luacode}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% Die OSGbeamer-Klasse erlaubt es, verschiedensprachige Dokumente aus
-%%% einer gemeinsamen Quelle zu definieren.
-%%% Sprachen werden dazu auf mehreren Ebenen mit unterschiedlicher Wirkung definiert:
-%%% 1. Die *möglichen* Zielsprachen des Dokuments.
-%%%    Diese Sprachen werden als Liste von ISO 639-1-Code (z.B. de, fr, en, ...)
-%%%    an die Paketoption `langs` definiert.
-%%%    Defaultwert ist langs={de,en}
-%%% 2. Die tatsächliche Zielsprache des Dokuments. Dies muss eine der Sprachen
-%%%    aus 1. sein.
+% Die OSGbeamer-Klasse erlaubt es, verschiedensprachige Dokumente aus
+% einer gemeinsamen Quelle zu definieren.
+% Sprachen werden dazu auf mehreren Ebenen mit unterschiedlicher Wirkung definiert:
+% 1. Die *möglichen* Zielsprachen des Dokuments.
+%    Diese Sprachen werden als Liste von ISO 639-1-Code (z.B. de, fr, en, ...)
+%    an die Paketoption `langs` definiert.
+%    Defaultwert ist langs={de,en}
+% 2. Die tatsächliche Zielsprache des Dokuments. Dies muss eine der Sprachen
+%    aus 1. sein. 
+%    Die Zielsprache kann auf verschiedene Weise festgelegt werden.
+%    - Wenn OLLM aktiv ist: über den Jobnamen
+%    - Option destlang
+%    - erstes Element in Option langs
+%    - Englisch
+% 3. Die Sprache, in der ein Text(abschnitt) tatsächlich geschrieben
+%    ist. Beispielsweise kann ein Dokument mit der Zielsprache Deutsch
+%    durchaus im Text englischsprachige Wörter oder Sätze enthalten.
 
-%%% 3. Die Sprache, in der ein Text(abschnitt) tatsächlich geschrieben
-%%%    ist. Beispielsweise kann ein Dokument mit der Zielsprache Deutsch
-%%%    durchaus im Text englischsprachige Wörter oder Sätze enthalten.
 
-
-%%% Die gewählte Sprache (Deutsch oder Englisch) wird entweder per Packageoption (de,en)
-%%% oder über das Macro \selectedbeamerlanguage übergeben.
-%%% Dabei hat das Macro Vorrang.
-%%% Wenn keine Sprache gewählt wird, erzeugt das Package eine Warnung.
+% Die gewählte Sprache (Deutsch oder Englisch) wird entweder per Packageoption (de,en)
+% oder über das Macro \selectedbeamerlanguage übergeben.
+% Dabei hat das Macro Vorrang.
+% Wenn keine Sprache gewählt wird, erzeugt das Package eine Warnung.
 
 \DeclareOption{de}{
   \providecommand{\selectedbeamerlanguage}{de}
@@ -42,7 +46,7 @@
 }{
   \RequirePackage[main=english, ngerman]{babel}
 }
-%%% Trennung und Quotes
+% Trennung und Quotes
 %\RequirePackage[ngerman,english]{babel}
 \RequirePackage[babel=true]{csquotes}
 % Shorthands sollen für beide Sprachen gelten, nicht nur für Deutsch
@@ -60,7 +64,7 @@
     {\grqq}
     {\glq}
     {\grq}
-%%% Ordinalzahlen
+% Ordinalzahlen
 \RequirePackage[super]{nth} % definiert \ordinal für englische Zahlen
 \let\ordinalen=\ordinal
 \newcommand{\ordinalde}[1]{\arabic{#1}.}
@@ -79,7 +83,7 @@
 \newcommand{\germ}[1]{\foreignlanguage{ngerman}{\emph{#1}}}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-%%% Zähler und Schalter für Sprachen
+% Zähler und Schalter für Sprachen
 % Ein Zähler lastlang<lang><name> dienen dazu, den Zählerstand <name> in der
 % Sprache <lang> zwischenzuspeichern, um diese anschließend wieder zurückzusetzen. 
 \newcounter{langlastdeframe}
