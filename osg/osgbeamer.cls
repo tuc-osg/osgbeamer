@@ -27,15 +27,15 @@
 ************************************************
  }{Update your LaTeX.}
 }
-\RequirePackage{iftex}               % für Test auf Lua(La)TeX
-\ifLuaTeX\else
-\ClassError{\classname}{\MessageBreak
-************************************************\MessageBreak
-* LuaLaTeX is required to use this class. \MessageBreak
-* Sorry! \MessageBreak
-************************************************
- }{Use this class with LuaLaTex.}
-\fi
+\ExplSyntaxOn
+\sys_if_engine_luatex:TF{}{
+ \ClassError{\classname}{\MessageBreak
+  ************************************************\MessageBreak
+  *~LuaLaTeX~is~required~to~use~this~class. \MessageBreak
+  *~Sorry! \MessageBreak
+  ************************************************
+ }{Use~this~class~with~LuaLaTex.} 
+\ExplSyntaxOff
 \RequirePackage{etoolbox,auxhook}
 \RequirePackage{luacode}
 \newtoggle{ollmdirstruct}\togglefalse{ollmdirstruct} % Valider Verzeichnisname?
