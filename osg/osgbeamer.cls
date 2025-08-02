@@ -28,7 +28,9 @@
  }{Update your LaTeX.}
 }
 \ExplSyntaxOn
-\sys_if_engine_luatex:TF{}{
+\sys_if_engine_luatex:TF{
+  \RequirePackage{luacode}
+}{
  \ClassError{\classname}{\MessageBreak
   ************************************************\MessageBreak
   *~LuaLaTeX~is~required~to~use~this~class. \MessageBreak
@@ -36,48 +38,51 @@
   ************************************************
  }{Use~this~class~with~LuaLaTex.} 
 \ExplSyntaxOff
-\RequirePackage{etoolbox,auxhook}
-\RequirePackage{luacode}
+\RequirePackage{etoolbox}
+
 \newtoggle{ollmdirstruct}\togglefalse{ollmdirstruct} % Valider Verzeichnisname?
 \newtoggle{ollmconfig}\togglefalse{ollmconfig}       % Configurationsdatei verhanden?
 \newtoggle{ollmjobname}\togglefalse{ollmjobname}     % Ollm-Jobname? 
-
 \newbool{osgllm}\boolfalse{osgllm}
+% brauchen wir die?
+\newtoggle{osglangcodeset}\togglefalse{osglangcodeset}
+\newtoggle{osgdoctypeset}\togglefalse{osgdoctypeset}
+
 % Überprüfe Bedingungen für OLLM
-\
-\begin{luacode}
--- lfs wird für currentdir() benötigt
-require("lfs")
--- Korrekt geformter Verzeichnisname?
-local res = string.find(lfs.currentdir(),"%d%d%d[ab]?%-[^/]+$")
-if res ~= nil then
-   tex.print("\\toggletrue{ollmdirstruct}")
-end   
--- Korrekt geformter Jobname?
-res = string.find(\luastring{\jobname},"[^-]+%-%d%d%d%-(slides|handout|script|screen)+%-%a%a%-[^-]+")
-local res2 = string.find(\luastring{\jobname},"[^-]+%-(slides|handout|script|screen)%-%a%a%-[^-]+")
-if res ~= nil or res2 ~= nil then
-   tex.print("\\toggletrue{ollmjobname}")
-end
--- Konfigurationsdatei vorhanden?
-res = io.open("../ollmconfig.pl","r")      
-if res ~= nil then
-   tex.print("\\toggletrue{ollmconfig}")
-   -- Bestmmung der LaTeX-Konfigurationsdatei
-   for line in (io.lines("../ollmconfig.pl")) do
+\ifdef{osgStandalone}{}{%
+  \begin{luacode}
+  -- lfs wird für currentdir() benötigt
+  require("lfs")
+  -- Korrekt geformter Verzeichnisname?
+  local res = string.find(lfs.currentdir(),"%d%d%d[ab]?%-[^/]+$")
+  if res ~= nil then
+    tex.print("\\toggletrue{ollmdirstruct}")
+  end   
+  -- Korrekt geformter Jobname?
+  res = string.find(\luastring{\jobname},"[^-]+%-%d%d%d%-(slides|handout|script|screen)%-%a%a(%-[^-]+)?")
+  local res2 = string.find(\luastring{\jobname},"[^-]+%-(slides|handout|script|screen)%-%a%a(%-[^-]+)?")
+  if res ~= nil or res2 ~= nil then
+     tex.print("\\toggletrue{ollmjobname}")
+  end
+  -- Konfigurationsdatei vorhanden?
+  res = io.open("../ollmconfig.pl","r")      
+  if res ~= nil then
+    tex.print("\\toggletrue{ollmconfig}")
+    -- Bestimmung der TeX-Konfigurationsdatei
+    for line in (io.lines("../ollmconfig.pl")) do
       if string.sub(line,1,1) ~= "#" then
       -- Nichtkommentarzeile, versuche parsen
          v = string.match(line,"$lectconfig%s-=%s-'%S';")
          tex.sprint("\\newcommand\\osgLectConfig{',v,'}")
       end
-   end
-end      
-\end{luacode}
-% brauchen wir die?
-\newtoggle{osglangset}\togglefalse{osglangset}
-\newtoggle{osgdoctypeset}\togglefalse{osgdoctypeset}
+    end
+  end      
+  \end{luacode}
+}
+\iftoggle{ollmconfig}{% Default, falls ollmconfig.pl keine TeX-Configdatei enhält.
+  \providecommand{\osgLectConfig}{../Inculde/lectdates}
+}{}
 
-\RequirePackage{varsfromjobname}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % OSG LaTeX Lecture Maker
 % =======================
@@ -88,78 +93,92 @@ end
 % durch das `latexmkrc` aufgearbeitet.
 % Der Jobname ist für eine Lehreinheit / ein Kapitel wie folgt aufgebaut:
 %
-% <lectureprefix>-<number>-<doctype>-<language>-<topic>
+% <lectureprefix>-<number>-<doctype>-<language>[-<topic>]
 %
+% Alternativ gibt es eine Kurzform, die für integrierende Dokumente (z.B. mit
+% osgcombine.sty), Anhänge o.ä. vorgesehen ist, die außerhalb der Reihenfolge stehen:
+%
+%  <lectureprefix>-<doctype>-<language>[-<topic>]
+%
+% Dabei bedeutet:
 % * <lectureprefix>: wahlfreies Kürzel für die Vorlesungsreihe
 % * <number>       : zweistellig Nummer des Kapitels
 % * <doctype>      : Ausgabeformat (siehe unten)
-% * <language>     : de oder en (für deutsch oder englisch)
+% * <language>     : ISO-639 Sprachcode, z.B. en oder de
 % * <topic>        : wahlfreie Bezeichnung für das Kapitelthema
 %
-% Mit Hilfe von osgcombine.sty kann ein Script oder ein kompletter Foliensatz
-% des gesamten Kurses erstellt werden. In diesem Fall ist der Jobname
-%
-% <lectureprefix>-<doctype>-<language>
-%
-% 
-\begin{luacode*}
-  -- lfs wird für currentdir() benötigt
-  require("lfs")
-  -- Teste auf das Vorhandensein einer Konfigurationsdatei.
-  -- Nur wenn die Datei existiert, lässt sie sich öffnen
-  f = io.open("../ollmconfig.pl","r")
-  if f ~= nil then
-      io.close(f)
-      -- Wenn Datei gefunden, wird osgllm-Flag gesetzt 
-      tex.print("\\booltrue{osgllm}")
-      -- Defaultwerte für OLLM
-      local sh_path = "../Ref"
-      local cfg_file = "lectdates"
-      local fst_chap_a = "1"
-      local fst_chap_b = "1"
-      -- Ermittelt das aktuelle Directory (ohne Pfad: alles ab dem letzten Slash)
-      cur_dir = string.match(lfs.currentdir(),"[^/]+$") 
-      -- Die anderen Werte werden aus der Konfigurationsdatei geholt.
-      for line in (io.lines("../ollmconfig.pl")) do
-        if string.sub(line,1,1) ~= "#" then
-           -- Nichtkommentarzeile, versuche parsen
-           v = string.match(line,"$first_chapter_number%s-=%s-(%S-);")
-           if v~= nil then
-              fst_chap_a = v
-              fst_chap_b = v
-           end
-           v1,v2 = string.match(line, "@first_chapter_number%s-=%s-%((%S-)%s-,%s-(%S-)%)%s-;")
-           if v1~= nil then
-              fst_chap_b = v1
-              fst_chap_a = v2
-           end
-           v = string.match(line,"$lectconfig%s-=%s-(%S-);")
-           if v ~= nil then
-              cfg_file = v
-           end   
-           v = string.match(line,"$shared_data_dir%s-=%s-(%S-);")
-           if v ~= nil then
-              sh_path = v
-           end   
-        end
-        -- \ollm dient als Hook für verschiedene OLLM-spezifische Macros
-        tex.print("\\gdef\\ollm{\\gdef\\OsgShareDataPath{".. sh_path.."}"..
-          "\\gdef\\OsgLectConfig{"..cfg_file.."}"..
-          "\\gdef\\OsgCurrentDir{"..cur_dir.."}"..
-          "\\IfToggle{osgscript}{\\gdef\\OsgFirstChapter{"..fst_chap_a.."}}{\\gdef\\OsgFirstChapter{"..fst_chap_b.."}}"..
-          "}")
-      end
-  else 
-      tex.print("\typeout{No proper directory configuration, assume standalone}")
-  end    
-\end{luacode*}
-\ifdef{\ollm}{
-   \ClassInfo{\classname}{osgllm set}
-   \booltrue{osgllm}
- }{
-   \ClassInfo{\classname}{osgllm unset}
-  \boolfalse{osgllm}
-}
+\iftoggle{osgjobname}{
+  \RequirePackage{varsfromjobname}
+  \IfUInteger{\gettwofromjobname}{%
+    \xdef\osgdoctype{\getthreefromjobname}%
+    \xdef\osgdoclangcode{\getfourfromjobname}%
+  }{%
+    \xdef\osgdoctype{gettwofromjobname}%
+    \xdef\osgdoclangcode{\getthreefromjobname}%
+  }%
+  \toggletrue{osgdoctypeset}%
+  \toggletrue{osglangcodeset}%
+}{}
+
+%   \begin{luacode*}
+%   -- lfs wird für currentdir() benötigt
+%   require("lfs")
+%   -- Teste auf das Vorhandensein einer Konfigurationsdatei.
+%   -- Nur wenn die Datei existiert, lässt sie sich öffnen
+%   f = io.open("../ollmconfig.pl","r")
+%   if f ~= nil then
+%       io.close(f)
+%       -- Wenn Datei gefunden, wird osgllm-Flag gesetzt 
+%       tex.print("\\booltrue{osgllm}")
+%       -- Defaultwerte für OLLM
+%       local sh_path = "../Ref"
+%       local cfg_file = "lectdates"
+%       local fst_chap_a = "1"
+%       local fst_chap_b = "1"
+%       -- Ermittelt das aktuelle Directory (ohne Pfad: alles ab dem letzten Slash)
+%       cur_dir = string.match(lfs.currentdir(),"[^/]+$") 
+%       -- Die anderen Werte werden aus der Konfigurationsdatei geholt.
+%       for line in (io.lines("../ollmconfig.pl")) do
+%         if string.sub(line,1,1) ~= "#" then
+%            -- Nichtkommentarzeile, versuche parsen
+%            v = string.match(line,"$first_chapter_number%s-=%s-(%S-);")
+%            if v~= nil then
+%               fst_chap_a = v
+%               fst_chap_b = v
+%            end
+%            v1,v2 = string.match(line, "@first_chapter_number%s-=%s-%((%S-)%s-,%s-(%S-)%)%s-;")
+%            if v1~= nil then
+%               fst_chap_b = v1
+%               fst_chap_a = v2
+%            end
+%            v = string.match(line,"$lectconfig%s-=%s-(%S-);")
+%            if v ~= nil then
+%               cfg_file = v
+%            end   
+%            v = string.match(line,"$shared_data_dir%s-=%s-(%S-);")
+%            if v ~= nil then
+%               sh_path = v
+%            end   
+%         end
+%         -- \ollm dient als Hook für verschiedene OLLM-spezifische Macros
+%         tex.print("\\gdef\\ollm{\\gdef\\OsgShareDataPath{".. sh_path.."}"..
+%           "\\gdef\\OsgLectConfig{"..cfg_file.."}"..
+%           "\\gdef\\OsgCurrentDir{"..cur_dir.."}"..
+%           "\\IfToggle{osgscript}{\\gdef\\OsgFirstChapter{"..fst_chap_a.."}}{\\gdef\\OsgFirstChapter{"..fst_chap_b.."}}"..
+%           "}")
+%       end
+%   else 
+%       tex.print("\typeout{No proper directory configuration, assume standalone}")
+%   end    
+%   \end{luacode*}
+% }
+% \ifdef{\ollm}{
+%    \ClassInfo{\classname}{osgllm set}
+%    \booltrue{osgllm}
+%  }{
+%    \ClassInfo{\classname}{osgllm unset}
+%   \boolfalse{osgllm}
+% }
 \newtoggle{osgscript}         % Wird bis zum Laden von Beamer als Unterscheidung
                               % von presentation- und article-Mode genutzt
 
@@ -185,10 +204,13 @@ end
   standalone.if = osgoptionstandalone,
   standalone.code = {
     \ifosgoptionstandalone
+        \gdef\osgStandalone{}
         \ClassInfoNoLine{\classname}{Activate standalone mode}
-    \fi
+    \else
+        \ClassWarningNoLine{\classname}{Activate standalone mode}
+    \fi    
   }
-  standalone.usage = preamble,
+  standalone.usage = load,
   % Soll die Kompatibilität zur alten osgbeamer-Klasse erhöhen
   legacy.if = osglegacy,
   legacy.code={
@@ -228,7 +250,7 @@ end
     \PassOptionsToPackage{#1}{osgbeamerbib}
   },
   % Werden Seiten kapitelübergreifend numeriert?
-  continuation. pass-to-packages= osgbeamerref
+  continuation. pass-to-packages= osgbeamerref,
   % 
   docid.code = {
     \PassOptionsToClass{docid=#1}{osgbeamerref}
@@ -256,7 +278,8 @@ end
   % * script/article  => Kapitel eines Scripts
   % * web     => Scriptkapitel in HTML (z.Z. nicht unterstützt)
   %
-  % In der Regel sollte diese Option unter OLLM nicht per Hand gesetzt werden.
+  % In der Regel sollte diese Option aus dem Jobnamen abgeleitet und nicht per
+  % Hand gesetzt werden. 
   doctype .choice: ,
   doctype/slides .code:n={%
     \booltrue{osgdoctypeset}
@@ -301,10 +324,10 @@ end
   handout format/2 on 1 .code ={%
     \gdef\osg@pgfpageoptions{{2 on 1}[a4paper, border shrink=2mm]}
   },
-  handout~format/4 on 1 .code ={%
+  handout format/4 on 1 .code ={%
     \gdef\osg@pgfpageoptions{{4 on 1}[a4paper, landscape, border shrink=2mm]}
   },
-  handout~format/6~on~1 .code ={%
+  handout format/6 on 1 .code ={%
     \gdef\osg@pgfpageoptions{{6 on 1}[a4paper, border shrink=2mm]}
   },
 
@@ -319,8 +342,8 @@ end
   % sollte dies primär im 'standalone'-Mode genutzt werden
   % Im OLLM wird die entsprechende Sprache i.d.R. über den Jobnamen
   % gesetzt (siehe osgbeamerlanguage.sty)
-  lang .choice:,
-  lang/de .code:n = {
+  lang.code:n = {
+    \iftoggle{}
     \booltrue{osglangset}
     \providecommand\selectedbeamerlanguage{de}
    \PassOptionsToPackage{de}{osgbeamerlanguage}
@@ -340,7 +363,7 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Default-Einstellungen:
 %
-% Hier werden (aus Sicht des Klassenautoren) sinnvolle
+% Hier werden (aus Sicht des Klassenautors) sinnvolle
 % Voreinstellungen getroffen.
 %
 \SetKeys{
@@ -372,22 +395,33 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Es gibt drei Möglichkeiten, wie spezifische Klassenoptionen gesetzt
 % werden können:
-%   1. Mit \SetGlobalClassOptions in lectdate.tex. Die hier gesetzten
-%      Optionen gelten für *alle* Kapitel.
-%   2. Als 'normale' Klassenoption. Die so gesetzten Optionen gelten
-%      nur in dem Kapitel und überschreiben die Optionen von 1.
-%   3. Mit \EnforceGlobalClassOptions in lectdate.tex. Die hier gesetzten
+%   1. Mit \SetGlobalClassOptions im Ollm-TeX-Config-File (lectdates.tex). Die
+%      hier gesetzten Optionen gelten für *alle* Kapitel.
+%   2. Die Optionen doctype und lang können über den Jobnamen gesetzt werden.
+%      Dies ist der Regelfall, da es wenig Sinn macht, diese global zu setzen. 
+%   3. Als 'normale' Klassenoption. Die so gesetzten Optionen gelten
+%      nur in dem Kapitel und überschreiben die Optionen von 1. und 2. Beim
+%      Überschreiben von 2. wird eine Warnung ausgegeben.
+%   4. Mit \EnforceGlobalClassOptions im Ollm-TeX-Config-File. Die so gesetzten
 %      Optionen gelten für *alle* Kapitel und überschreiben Optionen
-%      von 1. und 2.
+%      von 1. - 3. Dies sollte in der Regel vermieden und nur genutzt werden,
+%      um eine gesamte Lehrveranstaltung anzupassen, bevor sie detailliert
+%      überarbeitet wird. 
 %
 % Frühe Optionen
 % ==============
 % 
 % Um Klassen-Optionen für *alle* Kapitel/Lectures gemeinsam setzen zu können,
 % soll die 'lectdate.tex' bereits jetzt eingelesen werden.
-% Dies ist spekulativ: Evtl. hat der Autor 'standalone' gesetzt, dann ist es möglich, 
-% dass es keine Datei 'lectdate.tex' gibt, 
-% Dort werden die Macros \SetGlobalClassOptions und
+% Zu diesem Zeitpunkt ist aber noch nicht sicher bekannt, ob vom Nutzer nicht
+% die Option 'standalone' gesetzt wurde. Daher wird, so eine entsprechende
+% Directory-Struktur vorliegt und ein Config-File gefunden wurde, diese
+% spekulativ eingelesen. Dies ist in der Regel unproblematisch, kann aber in
+% seltenen Fällen zu Problemen führen. Um diese zu vermeiden, kann dies durch
+% die Definition von \osgStandalone *vor* \documentclass verhindert werden
+% (\def\osgStandalone{}). Falls ollm genutzt wird, macht dies ollm automatisch.
+
+% Für das Ollm-TeX-Config-File werden die Macros \SetGlobalClassOptions und 
 % \EnforceGlobalClassOptions zur Verfügung gestellt.
 \let\SetGlobalClassOptions=\SetKeys
 \NewDocumentCommand{\EnforceGlobalClassOptions}{m}{
@@ -405,15 +439,19 @@ end
 % Anmerkung: Praktisch alle Titelmacros werden durch Beamer, Koma oder OSG-Beamer
 % überschrieben. Da jedoch (vermutlich) häufig auf die Kernel-Definition zurückgegriffen
 % wird, ist es sinnvoll, diese zu erhalten.
+%
+% \osg@makedelayed legt mit den entsprechenden Namen Ersatzmacros an, die jedoch nicht die
+% zugehörige Semantik besitzen. Vielmehr werden beim Aufruf die Befehle mit
+% Argument in einem Hook gespichert. In der Stern-Variante definiert
+% \osg@makedelayed das Ersatzmacro mit einem optionalen Argument, so wie es
+% später auch durch Beamer und co. definiert wird. 
 % 
-% In der Stern-Variante definiert \osg@makedelayed das Ersatzmacro mit einem optionalen
-% Argument, so wie es später auch durch Beamer und co. definiert wird.
-% 
-% Alle Titlemacros sind gewahr (wie übersetzt man 'aware'?) der Beamer-Modi, es lassen
-% sich also mode-spezifische Titel (z.B. \title<article>{Foo}) spezifizieren. Dies wird
-% *nicht* im Macro selbst verankert, sondern über eine \mode-Umgebung zur verzögerten
-% Ausführung realisiert; entsprechend stehen die Modes außerhalb von 'lectdates.tex' nicht
-% zur Verfügung (auch nicht in von 'lectdates.tex' includierten Dateien).
+% Alle Titlemacros sind außerdem gewahr (wie übersetzt man 'aware'?) der
+% Beamer-Modi, es lassen sich also mode-spezifische Befehle
+% (z.B. \title<article>{Foo}) spezifizieren. Dies wird *nicht* im Macro selbst
+% verankert, sondern über eine \mode-Umgebung zur verzögerten Ausführung
+% realisiert; entsprechend stehen die Modes außerhalb der Ollm-TeX-Configdatei
+% noch nicht zur Verfügung. 
 \NewDocumentCommand{\osg@makedelayed}{s m}{
   % Wenn das Macro schon (durch den Kernel) definiert ist, speichere es unter einem anderen
   % Namen, sonst setzte es auf \relax.
@@ -426,7 +464,7 @@ end
         \gappto{\osg@titlematterhook}{\mode<##1>{\csuse{#2}[##2]{##3}}}
       }
     }
-  }{ % kein Stern => ohne optionales Argument
+  }{% kein Stern => ohne optionales Argument
     \ExpandArgs{c}\DeclareDocumentCommand{#2}{d<> m}{      
       \IfNoValueTF{##1}{
         \gappto{\osg@titlematterhook}{\csuse{#2}{##2}}
@@ -436,7 +474,8 @@ end
     }
   }
 }
-% Setze Macro auf die alte Definition zurück oder (wenn vorher nicht definiert) lösche es.
+% Mit \osg@restoredelayed wird ein Macro auf die alte Definition zurückgesetzt
+% oder (wenn vorher nicht definiert) gelöscht. 
 \NewDocumentCommand{\osg@restoredelayed}{m}{
   \ifcsvoid{original@#1}{\csundef{#1}}{\ExpandArgs{cc}\DeclareCommandCopy{#1}{original@#1}}
 }
@@ -450,9 +489,8 @@ end
 
 \IfBool{osgllm}{ % Zu diesem Zeitpunkt sind die Klassenoptionen noch nicht
   % ausgewertet. lectdates.tex wird also auch geladen, wenn OLLM korrekte
-  % Verzeichnisstrukturen vorfindet und der Nutzer nicht 'standalone' 
-  % als OLLM-Option übergibt, sondern nur als Klassenoption
-  %\ollm % Definiert \OsgShareDataPath, \OsgLectConfig und \OsgFirstChapter
+  % Verzeichnisstrukturen vorfindet und der Nutzer nicht '\osgStandalone' 
+  % definiert.
   \expandafter\InputIfFileExists{\osgLectConfig}{
     \osg@makedelayed*{author}
     \osg@makedelayed*{date}
@@ -971,9 +1009,11 @@ end
 \newlength{\osgrightcolwid}
 
 \ExplSyntaxOn
-
+\NewDocumentCommand{\IfUInteger}{mmm}{
+  \regex_match:nnTF{\d+}{#1}{#2}{3}
+}
 \NewDocumentCommand{\IfNumberTF}{mmm}
- {%
+{%
   % regex from https://stackoverflow.com/a/23872060/923955
   % with modifications for expl3 and for adding a unit
   \regex_match:nnTF
@@ -982,7 +1022,6 @@ end
    { #2 } % true text
    { #3 } % false text
  }
-
 \ExplSyntaxOff
 
 \NewDocumentCommand{\twocolparam}{>{\SplitList{,}} m}{%
