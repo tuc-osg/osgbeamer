@@ -3,7 +3,7 @@
 # OLLM - OSG LaTeX Lecture Maker
 # 
 # An extension for latexmk to support 
-# osgbeamer.cls
+# osglecture.cls
 #
 # DISCLAIMER:
 # This is my first piece of Perl code I've
@@ -35,7 +35,7 @@ use feature 'signatures','lexical_subs','switch';
 #no warnings 'experimental::signatures','experimental::smartmatch';
 use strict;
 use warnings;
-use version; our $VERSION = version->declare('0.11.1');
+my $VERSION = version->declare('0.12.0');
 
 use File::Basename;
 use File::Copy;
@@ -75,19 +75,26 @@ my $lectconfig='lectdates';
 my $lectureprefix="lecture";
 my $defaultlanguage='de';
 my $osgbeamer_dir = '';
-my $do_publish = 0;
+my $do_publish= 0;
 my $first_chapter_number = undef;
 my @first_chapter_number = undef;
 my $shared_source_dir ='../Include';
 my $shared_data_dir='../Ref';
 my $standalone=0;
 my $config_file = '../ollmconfig.pl';
+my $nometa=undef;
+my $notopic=undef;
+my %region;
+$region{de}='de_DE';
+$region{en}='en_US';
+$region{fr}='fr_FR';
 my %deploy_path;
 my %deploy_file;
 my %deploy_restriction;
 my $deploy_pw;
 my $shell_escape=0;
 $deploy_file{all} = '${prefix}-${num}-${doctype}-${lang}-${topic}';
+
 
 greeting();
 
@@ -99,7 +106,7 @@ foreach ( @ARGV ) {
                                          # in this way, file names like 'slides' are possible
     $forceoptplus=1;
   }
-  if ($_ eq '--help') {
+  if ($_ eq '--latexmkhelp') {
     &main::print_help;
     say colored("\nFor help on ollm call:",'bold')," 'ollm +help | +h'";
     exit;
@@ -107,7 +114,10 @@ foreach ( @ARGV ) {
   if ($_ eq '--') {last;}
 }
 Getopt::Long::Configure("long_prefix_pattern=-|--");      
-GetOptions ("jobname=s" => \$main::jobname); # catch standard option 'jobname'
+GetOptions (
+	    "jobname=s" => \$main::jobname, # catch standard option 'jobname'
+	    "h|help|?" => \&ollm_print_help
+	   ); 
 # reinsert jobname
 if (!($main::jobname eq '')) {
   push(@ARGV ,'--jobname='.$main::jobname);
@@ -116,7 +126,7 @@ Getopt::Long::Configure("prefix=+");     # ollm options starts with '+'
 if ($forceoptplus == 0) {
     foreach ( @ARGV ) {
 	# check for bare ollm options and add prefix (if no +force+)
-  $_ = '+'.$_ if $_ =~ /^(slides|beamer|presentation|script|article|handout|standalone|publish|debug|verbose|lang|classpath|nosocket)/;
+  $_ = '+'.$_ if $_ =~ /^(slides|beamer|presentation|script|article|handout|standalone|nometa|publish|debug|verbose|lang|classpath|nosocket)/;
 	if ($_ eq '--') {last;}
     }
 }
@@ -127,18 +137,18 @@ GetOptions(
 	   'verbose|debug' => sub { $main::silent=0; },
 	   'h|help|?' => \&ollm_print_help
 	  );
-if ($standalone) {
-  # In case of 'standalone' we return to latexmk
-  if ($osgbeamer_dir ne '') {
-    tex_path($osgbeamer_dir);
-  }
-  return 1; 
-}
+#if ($standalone) {
+#  # In case of 'standalone' we return to latexmk
+#  if ($osgbeamer_dir ne '') {
+#    tex_path($osgbeamer_dir);
+#  }
+#  return 1; 
+#}
 # Check directory structure
-if (!is_ollmtree()) {
-  print colored("Error: No proper directory structure. Try option \'standalone\'.\n",'red');
-  exit(-1); # exit() returns to shell, not to latexmk
-}
+#if (!is_ollmtree()) {
+#  print colored("Error: No proper directory structure. Try option \'standalone\'.\n",'red');
+#  exit(-1); # exit() returns to shell, not to latexmk
+#}
 
 # remaining ollm options
 GetOptions(
@@ -148,71 +158,88 @@ GetOptions(
 	   # 'slides', 'beamer', or 'presentation' for doctype 'slides'
 	   'slides|beamer|presentation' => sub {
 	     $doctype='slides';
-	     if (is_beamer_dir() == 0) {
-	       say "Error: Directory is not intended for beamer document!\n";
-	       exit(-1);
-	     }
 	   },
 	   # 'script' or 'article' for doctype 'script'
 	   'script|article' => sub {
-	     if (is_article_dir() == 0) {
-	       say "Error: Directory is not intended for article document!\n";
-	       exit(-1);
-	     }
 	     $doctype='script';
 	   },
 	   'handout' => sub {
 	     $doctype='handout';
-	     if (is_beamer_dir() == 0) {die
-	       say color('red')."Error: Directory is not intended for beamer document!\n".color('reset');
-	       exit(-1);
-	     }
 	   },
 	   'publish' => \$do_publish,
 	   'nosocket' => sub {
 	       $main::lualatex = 'lualatex --shell-escape --synctex=1 --nosocket %O %P';
-	     }
+	     },
+	   'standalone' => \$standalone,
+	   'nometa' => \$nometa,
+	   'notopic' => \$notopic,
+	   'classpath=s' => \$osgbeamer_dir,
+	   'verbose|debug' => sub { $main::silent=0; },
+	   'h|help|?' => \&ollm_print_help
 	  );
 
-## Read and process config file
-unless ( -e  $config_file) {
-  die color('red')."Error: Can't find config file '".$config_file."'\n".
-  color('faint')."If you have an old config file, rename it to 'ollmconfig.pl'\n".color('reset');
-}
+# Check directory structure
+if (!$standalone) {
+  if (!is_ollmtree() ) {
+    print colored("Error: No proper directory structure. Try option \'standalone\'.\n",'red');
+    exit(-1); # exit() returns to shell, not to latexmk
+  }
+  if (($doctype eq 'script') and (is_article_dir() == 0)) {
+    print colored("Error: Directory is not intended for script content.\n",'red');
+    exit(-1);
+  }
+  if ((($doctype eq 'slides') or ($doctype eq 'handout')) and (is_beamer_dir() == 0)) {
+    print colored("Error: Directory is not intended for presentation content.\n",'red');
+    exit(-1);
+  }
 
-# Make @ARGV local and save $config_file as first element of @ARGV.
-# The empty diamond operator <> opens first element of  @ARGV as file.
-my $confcode = do{local(@ARGV,$/)=$config_file;<>};
-# process content of config file
-eval $confcode;
-print color('reset');
-if ($@) {
-  print color('red');
-  say "Error: Can't parse \'$config_file\': ",$@;
+  ## Read and process config file
+  unless ( -e  $config_file) {
+    die color('red')."Error: Can't find config file '".$config_file."'\n".
+      color('faint')."If you have an old config file, rename it to 'ollmconfig.pl'\n".color('reset');
+  }
+
+  # Make @ARGV local and save $config_file as first element of @ARGV.
+  # The empty diamond operator <> opens first element of  @ARGV as file.
+  my $confcode = do{local(@ARGV,$/)=$config_file;<>};
+  # process content of config file
+  eval $confcode;
   print color('reset');
-  exit(-1);
-}
-if ($ollmver eq '') {
-  print color('red');
-  print color('faint');
-  say "Warning: Config file does not specifiy version.";
-  say "         Prepare for troubble due to old config file.";
-  print color('reset');
-} elsif ( version->parse($ollmver) != version->parse($VERSION)) {
-  print color('red');
-  print color('faint');
-  say "Warning: Version of config file doesn't match ollm version.";
-  say "         Prepare for troubble.";
-  print color('reset');
+  if ($@) {
+    print color('red');
+    say "Error: Can't parse \'$config_file\': ",$@;
+    print color('reset');
+    exit(-1);
+  }
+  if ($ollmver eq '') {
+    print color('red');
+    print color('faint');
+    say "Warning: Config file does not specifiy version.";
+    say "         Prepare for troubble due to old config file.";
+    print color('reset');
+  } else {
+    my ($omajor, $ominor) = ($VERSION =~ /^(\d+)\.(\d+)/); 
+    my ($smajor, $sminor) = ($ollmver =~ /^(\d+)\.(\d+)/);
+    if ( $omajor.$ominor != $smajor.$sminor) {
+      print color('red');
+      print color('faint');
+      say "Warning: Version of config file doesn't match ollm version.";
+      say "         Prepare for troubble.";
+      print color('reset');
+    }
+  }
 }
 if ($osgbeamer_dir ne '') {
   tex_path($osgbeamer_dir);
 }
-tex_path($shared_source_dir);
+if (!$standalone) {
+  tex_path($shared_source_dir);
+}
 
 # Ollm has (currently) two main purposes
 #  1. Prepate latexmk to generate proper documents in ollm directory structure
 #  2. Publish documents
+# Here, we branch
 if ($do_publish) {
   publish();
 } else {
@@ -226,32 +253,35 @@ return 1;
 ##
 sub make_document {
   my $number;
-  my $current_first_chapter;
   my $topic;
   if ($lang eq '') {
     $lang = $defaultlanguage;
   }
-  if ($shell_escape == 1) {
-   # $main::lualatex = 'lualatex --shell-escape --synctex=1 %O %P';
-  }
-  # Determine the number of the current directory (starting with 0)
-  ($number,$topic) = lect_descr($doctype);
-  ($number,$current_first_chapter) = curr_number($number);
-  # We need TeX code to be executed *before* the actual document
-  # '\DocumentMetadata' is needed if we do pdf tagging
-  if ($lang eq "en") {
-    $main::pre_tex_code='\DocumentMetadata{pdfversion=1.7,lang=en-US}';
-  } else { # $lang should be 'de'
-    $main::pre_tex_code='\DocumentMetadata{pdfversion=1.7,lang=de-DE}';
-  }
-  if ($number < 0) {
-    $number = '_'.abs($number);
+  my $bcp_code;
+  ($lang,$bcp_code) = langregion($lang);
+  #if ($shell_escape == 1) {
+  # $main::lualatex = 'lualatex --shell-escape --synctex=1 %O %P';
+  #}
+  if (!$nometa) {
+    $main::pre_tex_code='\DocumentMetadata{pdfversion=1.7,lang='.$bcp_code.'}';
   }
   #$main::aux_dir=$shared_data_dir;
   #$main::emulate_aux=1;
-  # the remaining information will be coded within the job name
   #  <lectureprefix>-<number>-<doctype>-<language>-<topic>
-  $main::jobname = $lectureprefix.'-'.$number.'-'.$doctype.'-'.$lang.'-'.$topic;
+  if (!$standalone) {
+    # Determine the number of the current directory (starting with 0)
+    ($number,$topic) = lect_descr($doctype);
+    $number = curr_number($number);
+    if ($number < 0) {
+      $number = '_'.abs($number);
+    }
+    $main::jobname = $lectureprefix.'-'.$number.'-'.$doctype.'-'.$lang;
+    if (!$notopic) {
+       $main::jobname= $main::jobname.'-'.$topic;
+    }
+  } else { # stand alone
+    $main::pre_tex_code=$main::pre_tex_code.'\def\osgStandalone{}';
+  }
 }
  
 sub publish(){
@@ -381,7 +411,6 @@ sub is_article_dir {
 
 sub is_ollmtree {
   # true (1) if current directory is ollm directory
-  # vorgesehen ist, sonst false (0)
   if (( is_beamer_dir() == 1 ) or ( is_article_dir() == 1 )) {
     1;
   } else {
@@ -405,7 +434,7 @@ sub doc_dirs ($type) {
   } elsif (($type eq 'script') or ($type eq 'article')) {
     @dirs= (@dirs,glob ( '../[0-9][0-9][0-9]a-*'));
   }
-  foreach my $d ( @dirs ) {	# cut path prefix
+  foreach my $d ( @dirs ) { # cut path prefix
     $d = basename($d);
   }
   @dirs = sort @dirs;
@@ -413,30 +442,52 @@ sub doc_dirs ($type) {
 }
 
 sub greeting {
-  print colored("OLLM - OSG LaTeX Lecture Maker $VERSION: an extension for latexmk to support osgbeamer.cls\n\n", "bold");
+  print colored("OLLM - OSG LaTeX Lecture Maker $VERSION: an extension for latexmk to support osglecture.cls\n\n", "bold");
 }
 
 sub ollm_print_help {
-    print 
+  print
 	"Usage: \n",
-	" ", colored("Generate documents:\n","faint"),
-	"  latexmk [<ollm options>] [<doctype>] [<latexmk options>] [<file>]\n",
+	" ", colored("Generate documents:\n","underline"),
+	"  ollm [<ollm options>] [<doctype>] [<latexmk options>] [<file>]\n",
 	"  <doctype>: '+slides'|'+beamer'|'+handout'|'+script'|'+article' (default: '+slides')\n\n",
 	"  <ollm options> (prefix '+' may be skipped if +force+ is not set)\n",
 	"   +force+:            enforces use of '+' prefix for ollm options\n",
-	"   +standalone:        disable most features of OLLM\n",
+	"   +standalone:        disables most features of OLLM\n",
 	"   +debug|+verbose:    additional information\n",
-	"   +lang=[de|en]:      select language\n",
+	"   +lang=<language>:   selects language (ISO-639 or BCP47)\n",
+	"   +notopic:           pdf file name without topic suffix\n",
+	"   +nometa:            supress generation of MetaData\n",
 	"   +ollmconfig=<file>: reads configuration from <file> (default: '../ollmconfig.pl')\n",
 	"   +classpath=<path>:  adds <path> to LaTeX search path, end with '//' to include subdirectories\n",
-	"  <file> LaTeX file (default: 'main.tex'), *must* use osgbeamer class.\n\n",
-	" ",colored("Deploy documents:\n","faint"),
-	"  latexmk [lang=de|en|all] +publish <doctype>\n",
-	"  <latexmk options>: see 'latexmk --help'\n"
+	"  <latexmk options>: see 'latexmk --help'\n",
+	"  <file> LaTeX file (default: 'main.tex'), ",colored("must",'bold')," use osglecture class.\n\n",
+	" ",colored("Deploy documents:\n","underline"),
+	"  ollm [+lang=<lang>|all] [+ollmconfig=<file>] +publish <doctype>\n\n",
 	;
     exit;
 }
 
+sub langregion($lc) {
+  # proc_lang(lang)
+  #
+  # lang: ISO-639 (en, de, fr,...) | BCP47 (en_US, de_CH, ...)
+  #
+  # return both, language code (ISO-639) and language/region code (BCP47)
+  if ( $lc =~ m/_/ ) {
+    my ($l,$r) = ( $lc =~ /^([[:lower:]][[:lower:]])_([[:upper:]][[:upper:]])/);    
+    return ($l,$lc);
+  } else {
+    my $r = $region{$lc};
+    if ($r) {
+      # Warning?
+      return ($lc,$r);
+    } else {
+      return ($lc,$lc);
+    }
+  }
+}
+		   
 sub lect_descr($type) {
   # lect_descr(type)
   #
