@@ -82,8 +82,9 @@ my $shared_source_dir ='../Include';
 my $shared_data_dir='../Ref';
 my $standalone=0;
 my $config_file = '../ollmconfig.pl';
-my $nometa=undef;
-my $notopic=undef;
+my $nometa=0;
+my $notopic=0;
+my $noserial=0;
 my %region;
 $region{de}='de_DE';
 $region{en}='en_US';
@@ -172,7 +173,6 @@ GetOptions(
 	     },
 	   'standalone' => \$standalone,
 	   'nometa' => \$nometa,
-	   'notopic' => \$notopic,
 	   'classpath=s' => \$osgbeamer_dir,
 	   'verbose|debug' => sub { $main::silent=0; },
 	   'h|help|?' => \&ollm_print_help
@@ -270,12 +270,16 @@ sub make_document {
   #  <lectureprefix>-<number>-<doctype>-<language>-<topic>
   if (!$standalone) {
     # Determine the number of the current directory (starting with 0)
-    ($number,$topic) = lect_descr($doctype);
-    $number = curr_number($number);
-    if ($number < 0) {
-      $number = '_'.abs($number);
+    if (!$noserial) {
+      ($number,$topic) = lect_descr($doctype);
+      $number = curr_number($number);
+      if ($number < 0) {
+	$number = '_'.abs($number);
+      }
+      $main::jobname = $lectureprefix.'-'.$number.'-'.$doctype.'-'.$lang;
+    } else {
+      $main::jobname = $lectureprefix.'-'.$doctype.'-'.$lang;
     }
-    $main::jobname = $lectureprefix.'-'.$number.'-'.$doctype.'-'.$lang;
     if (!$notopic) {
        $main::jobname= $main::jobname.'-'.$topic;
     }
@@ -392,7 +396,10 @@ sub publish(){
 sub is_beamer_dir {
   # true (1) if current directory is intended for slides/beamer
   my $dir = basename(getcwd());
-  if ($dir =~ /^[0-9][0-9][0-9][b]?-.*/) {
+  if ($dir =~ /^[0-9][0-9][0-9]b?x?-.*/) {
+    if ($dir =~ /^[0-9][0-9][0-9]bx?-.*/) {
+      $noserial=1;
+    }
     1;
   } else {
     0;
@@ -402,7 +409,10 @@ sub is_beamer_dir {
 sub is_article_dir {
   # true (1) if current directory is intended for article/script
   my $dir = basename(getcwd());
-  if ($dir =~ /^[0-9][0-9][0-9][a]?-.*/) {
+  if ($dir =~ /^[0-9][0-9][0-9]a?x?-.*/) {
+    if ($dir =~ /^[0-9][0-9][0-9]a?x-.*/) {
+      $noserial=1;
+    }
     1;
   } else {
     0;
@@ -428,11 +438,11 @@ sub doc_dirs ($type) {
     my @empty = ();
     return @empty;
   }
-  my @dirs=glob ('../[0-9][0-9][0-9]-*');           # common directories
+  my @dirs=glob ('../[0-9][0-9][0-9]x?-*');           # common directories
   if (($type eq 'slides') or ($type eq 'handout')){ # doctype-specific directories
-    @dirs= (@dirs,glob ( '../[0-9][0-9][0-9]b-*'));
+    @dirs= (@dirs,glob ( '../[0-9][0-9][0-9]bx?-*'));
   } elsif (($type eq 'script') or ($type eq 'article')) {
-    @dirs= (@dirs,glob ( '../[0-9][0-9][0-9]a-*'));
+    @dirs= (@dirs,glob ( '../[0-9][0-9][0-9]ax?-*'));
   }
   foreach my $d ( @dirs ) { # cut path prefix
     $d = basename($d);
@@ -456,12 +466,11 @@ sub ollm_print_help {
 	"   +standalone:        disables most features of OLLM\n",
 	"   +debug|+verbose:    additional information\n",
 	"   +lang=<language>:   selects language (ISO-639 or BCP47)\n",
-	"   +notopic:           pdf file name without topic suffix\n",
 	"   +nometa:            supress generation of MetaData\n",
 	"   +ollmconfig=<file>: reads configuration from <file> (default: '../ollmconfig.pl')\n",
 	"   +classpath=<path>:  adds <path> to LaTeX search path, end with '//' to include subdirectories\n",
 	"  <latexmk options>: see 'latexmk --help'\n",
-	"  <file> LaTeX file (default: 'main.tex'), ",colored("must",'bold')," use osglecture class.\n\n",
+	"  <file> LaTeX file (default: 'main.tex'), should use osglecture class.\n\n",
 	" ",colored("Deploy documents:\n","underline"),
 	"  ollm [+lang=<lang>|all] [+ollmconfig=<file>] +publish <doctype>\n\n",
 	;
