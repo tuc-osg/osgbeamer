@@ -241,7 +241,17 @@ if (!$standalone) {
 #  2. Publish documents
 # Here, we branch
 if ($do_publish) {
-  publish();
+  # Die Bestimmung der Hauptdatei ist nicht trivial. Daher lassen wir
+  # das latexmk machen und setzen ein Hook vor den eigentlichen Compilerruf.
+  
+  $pre_primary_hook = sub {
+    if ($main::main) {
+      $main::main= $main::default_files[0];
+    }
+    print "Hauptdatei nach Argumentverarbeitung: $main::main\n";
+    exit 0;
+    publish()
+};
 } else {
   say "Make document";
   make_document();
@@ -287,7 +297,9 @@ sub make_document {
     $main::pre_tex_code=$main::pre_tex_code.'\def\osgStandalone{}';
   }
 }
- 
+
+
+
 sub publish(){
   # names of variables as used in config file
   my $num;
