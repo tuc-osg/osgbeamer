@@ -7,3 +7,4 @@ install/*
 *.fls
 *.safe
 *.so
+*.aux

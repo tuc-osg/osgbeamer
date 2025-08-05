@@ -35,7 +35,7 @@ use feature 'signatures','lexical_subs','switch';
 #no warnings 'experimental::signatures','experimental::smartmatch';
 use strict;
 use warnings;
-my $VERSION = version->declare('0.12.0');
+my $VERSION = '0.12.0';
 
 use File::Basename;
 use File::Copy;
@@ -218,7 +218,7 @@ if (!$standalone) {
     say "         Prepare for troubble due to old config file.";
     print color('reset');
   } else {
-    my ($omajor, $ominor) = ($VERSION =~ /^(\d+)\.(\d+)/); 
+    my ($omajor, $ominor) = ($VERSION =~ /^(\d+)\.(\d+)/);
     my ($smajor, $sminor) = ($ollmver =~ /^(\d+)\.(\d+)/);
     if ( $omajor.$ominor != $smajor.$sminor) {
       print color('red');
@@ -236,23 +236,30 @@ if (!$standalone) {
   tex_path($shared_source_dir);
 }
 
+
 # Ollm has (currently) two main purposes
 #  1. Prepate latexmk to generate proper documents in ollm directory structure
 #  2. Publish documents
 # Here, we branch
 if ($do_publish) {
-  # Die Bestimmung der Hauptdatei ist nicht trivial. Daher lassen wir
-  # das latexmk machen und setzen ein Hook vor den eigentlichen Compilerruf.
-  
-  $pre_primary_hook = sub {
+  no warnings 'redefine';
+  *main::fix_cmds = sub {
+    print "Main: $main::file_list[0]\n";
+    print "Default: $main::default_files[0]\n";
     if ($main::main) {
       $main::main= $main::default_files[0];
     }
-    print "Hauptdatei nach Argumentverarbeitung: $main::main\n";
+    print "Called overwritten sub";
+    #print "Hauptdatei nach Argumentverarbeitung: $main::main\n";
     exit 0;
-    publish()
-};
-} else {
+    publish();
+  };
+  print "Overwritten....";
+  # Die Bestimmung der Hauptdatei ist nicht trivial. Daher lassen wir
+  # das latexmk machen und setzen ein Hook vor den eigentlichen Compilerruf.
+  #$main::fix_cmds = \&scan_for_lang;
+  #main::add_hook('latex_file_hooks', \&scan_for_lang);
+ } else {
   say "Make document";
   make_document();
 }
@@ -297,8 +304,6 @@ sub make_document {
     $main::pre_tex_code=$main::pre_tex_code.'\def\osgStandalone{}';
   }
 }
-
-
 
 sub publish(){
   # names of variables as used in config file
