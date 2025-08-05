@@ -1,7 +1,6 @@
 .#*
 .DS_Store
 rail.sty
-test/standalone/*
 install/*
 *.fdb_latexmk
 *.log
