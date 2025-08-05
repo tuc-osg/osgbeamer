@@ -13,10 +13,12 @@
 % 2. Die tatsächliche Zielsprache des Dokuments. Dies muss eine der Sprachen
 %    aus 1. sein. 
 %    Die Zielsprache kann auf verschiedene Weise festgelegt werden.
-%    - Wenn OLLM aktiv ist: über den Jobnamen
-%    - Option destlang
-%    - erstes Element in Option langs
-%    - Englisch
+%    - Wenn OLLM aktiv ist: über den Jobnamen; wenn babel/polyglossia genutzt
+%      wird, wird die Hauptsprache überschrieben
+%    - Option destlang; wenn babel/polyglossia aktiv ist, wird damit die
+%      Hauptsprache überschrieben.
+%
+%    - sonst: Englisch
 % 3. Die Sprache, in der ein Text(abschnitt) tatsächlich geschrieben
 %    ist. Beispielsweise kann ein Dokument mit der Zielsprache Deutsch
 %    durchaus im Text englischsprachige Wörter oder Sätze enthalten.
@@ -27,6 +29,27 @@
 % Dabei hat das Macro Vorrang.
 % Wenn keine Sprache gewählt wird, erzeugt das Package eine Warnung.
 
+
+\DeclareKeys[osgbeamerlanguage]{
+  destlang.code = {
+    \ifosgoptionstandalone
+        \providecommand{\}
+    \else
+        \PackageWarningNoLine{\packagename}{OLLM active, option 'destlang' ignored.}
+    \fi
+  },
+}
+\DeclareOption{langs}{
+  \renewcommand*{\do}[1]{* #1\MessageBreak}
+  
+}
+\DeclareOption{destlang}
+\ifosgoptionstandalone{%
+      
+    }{%
+      
+    }
+}
 \DeclareOption{de}{
   \providecommand{\selectedbeamerlanguage}{de}
   \def\languagename{German}% für translator.sty
@@ -35,7 +58,19 @@
   \providecommand{\selectedbeamerlanguage}{en}
   \def\languagename{English}% für translator.sty
 }
+\SetKeys{langs={en,de}}
+
 \ProcessOptions\relax
+\newcommand{\LangNameFrom639}[1]{%
+  \IfEqCase{#1}{%
+    {en}{english}%
+    {de}{german}%
+    {fr}{french}%
+    {it}{italian}%
+    {es}{spanish}%
+  }[\PackageError{\packagename}{Language code '#1' is not configured.}]% fallback: Fehler
+}
+
 
 \ifundef{\selectedbeamerlanguage}{
       \PackageWarningNoLine{\packagename}{No language specified, assume English (en)}
