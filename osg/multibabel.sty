@@ -1,13 +1,24 @@
-\NeedsTeXFormat{LaTeX2e}
+\NeedsTeXFormat{LaTeX2e}[2022/06/01]
 \def\packagename{osgbeamerlanguage}
 \ProvidesPackage{\packagename}[2025/08/25 v0.5]
-\RequirePackage{luacode}
+\ExplSyntaxOn
+\sys_if_engine_luatex:TF{
+  \RequirePackage{luacode}
+}{
+ \ClassError{\classname}{\MessageBreak
+  ************************************************\MessageBreak
+  *~LuaLaTeX~is~required~to~use~this~package. \MessageBreak
+  *~Sorry! \MessageBreak
+  ************************************************
+ }{Use~this~package~with~LuaLaTex.} 
+\ExplSyntaxOff
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Die OSGbeamer-Klasse erlaubt es, verschiedensprachige Dokumente aus
+% Die osglecture-Klasse erlaubt es, verschiedensprachige Dokumente aus
 % einer gemeinsamen Quelle zu definieren.
 % Sprachen werden dazu auf mehreren Ebenen mit unterschiedlicher Wirkung definiert:
 % 1. Die *möglichen* Zielsprachen des Dokuments.
-%    Diese Sprachen werden als Liste von ISO 639-1-Code (z.B. de, fr, en, ...)
+%    Diese Sprachen werden als Liste von ISO 639-1-Codes (z.B. de, fr, en, ...)
 %    an die Paketoption `langs` definiert.
 %    Defaultwert ist langs={de,en}
 % 2. Die tatsächliche Zielsprache des Dokuments. Dies muss eine der Sprachen
@@ -50,15 +61,7 @@
       
     }
 }
-\DeclareOption{de}{
-  \providecommand{\selectedbeamerlanguage}{de}
-  \def\languagename{German}% für translator.sty
-}
-\DeclareOption{en}{
-  \providecommand{\selectedbeamerlanguage}{en}
-  \def\languagename{English}% für translator.sty
-}
-\SetKeys{langs={en,de}}
+
 
 \ProcessOptions\relax
 \newcommand{\LangNameFrom639}[1]{%
