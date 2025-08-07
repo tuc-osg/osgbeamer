@@ -1,7 +1,7 @@
 \NeedsTeXFormat{LaTeX2e}[2022/06/01]
-\def\classname{osgbeamer}
-\def\osgbeamerversion{2022/08/17 v0.9.0d}
-\ProvidesClass{\classname}[\osgbeamerversion]
+\def\classname{osglecture}
+\def\osglectureversion{2022/08/17 v0.9.0d}
+\ProvidesClass{\classname}[\osglectureversion]
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
 % Beamer- und Script-Template für die Professur Betriebssysteme an
@@ -48,8 +48,8 @@
 \newtoggle{osglangcodeset}\togglefalse{osglangcodeset}
 \newtoggle{osgdoctypeset}\togglefalse{osgdoctypeset}
 
-% Überprüfe Bedingungen für OLLM
 \ifdef{osgStandalone}{}{%
+% Überprüfe Bedingungen für OLLM
   \begin{luacode}
   -- lfs wird für currentdir() benötigt
   require("lfs")
