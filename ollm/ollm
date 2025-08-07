@@ -242,26 +242,32 @@ if (!$standalone) {
 #  2. Publish documents
 # Here, we branch
 if ($do_publish) {
-  no warnings 'redefine';
-  *main::fix_cmds = sub {
-    print "Main: $main::file_list[0]\n";
-    print "Default: $main::default_files[0]\n";
-    if ($main::main) {
-      $main::main= $main::default_files[0];
+    if ($lang eq 'all') {
+	# ACHTUNG, DIRTY HACK
+	# Die Gesamtsprachliste wird (nicht mehr in OLLM-Config-Datei sondern) in der TeX-Config oder der TeX-Hauptdatei gespeichert.
+	# Die Bestimmung der Hauptdatei ist nicht trivial, auch wenn sie meist (aber eben nicht immer) './main.tex' ist.
+	
+	# Daher lassen wir das latexmk machen, indem wir eine Funktion überschreiben, die nach der Befehlszeilenauswertung gerufen
+	# wird (fix_cmds).
+	# Anmerkung 1: Der pre_xlatex-Hook ist nicht hinreichend, da der Compiler in Publish-Situationen häufig gar nicht erst gerufen wird.
+	# Anmerkung 2: Das Überschreiben von 'fix_cmds' ist insofern unkritisch, da die Kontrolle nicht mehr an latexmk zurückgegeben wird.
+	no warnings 'redefine';
+	*main::fix_cmds = sub {
+	    print "Main: $main::file_list[0]\n";
+	    print "Default: $main::default_files[0]\n";
+	    if ($main::main) {
+		$main::main= $main::default_files[0];
+	    }
+	    print "Called overwritten sub";
+	    #print "Hauptdatei nach Argumentverarbeitung: $main::main\n";
+	    \&publish
+	};
+	return;
     }
-    print "Called overwritten sub";
-    #print "Hauptdatei nach Argumentverarbeitung: $main::main\n";
-    exit 0;
-    publish();
-  };
-  print "Overwritten....";
-  # Die Bestimmung der Hauptdatei ist nicht trivial. Daher lassen wir
-  # das latexmk machen und setzen ein Hook vor den eigentlichen Compilerruf.
-  #$main::fix_cmds = \&scan_for_lang;
-  #main::add_hook('latex_file_hooks', \&scan_for_lang);
+    \&publish;
  } else {
   say "Make document";
-  make_document();
+  \&make_document;
 }
 return 1;
 
