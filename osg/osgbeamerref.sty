@@ -510,9 +510,12 @@ hyperref
      % Verschiedene Pakete (insbesondere hyperref und amsmath) definieren \label
      % um. Daher wird hier auch \ltx@label ersetzt, das von
      % diesem Paketen gerufen wird.
+     % Workarround, da ltx@label in aktuellen packages nicht mehr verwendet wird. 
+     \ifdefined\ltx@label
      \RenewDocumentCommand{\ltx@label}{m}{%
        \beamer@savemode\zref@label{#1}\beamer@resumemode
      }
+     \fi
      % Zu diesem Zeitpunkt ist die aux-Datei schon eingelesen.
      % Für die Crossreferenzierung müssen auch die anderen
      % (referenzierten) aux-Dateien gelesen werden.
