@@ -330,7 +330,32 @@
   handout format/6 on 1 .code ={%
     \gdef\osg@pgfpageoptions{{6 on 1}[a4paper, border shrink=2mm]}
   },
+  % Sprachen
+  % ========
+  % Die osglecture-Klasse erlaubt es, verschiedensprachige Dokumente aus
+  % einer gemeinsamen Quelle zu definieren.
+  % Sprachen werden dazu auf mehreren Ebenen mit unterschiedlicher Wirkung definiert:
+  % 1. Die *möglichen* Zielsprachen des Dokuments.
+  %    Diese Sprachen werden als Liste von ISO 639-1-Codes (z.B. de, fr, en, ...)
+  %    an die Paketoption `langs` definiert.
+  %    Defaultwert ist langs={de,en}
+  % 2. Die tatsächliche Zielsprache des Dokuments. Dies muss eine der Sprachen
+  %    aus 1. sein. 
+  %    Die Zielsprache kann auf verschiedene Weise festgelegt werden.
+  %    - Wenn OLLM aktiv ist: über den Jobnamen; wenn babel/polyglossia genutzt
+  %      wird, wird die Hauptsprache überschrieben
+  %    - Option destlang; wenn babel/polyglossia aktiv ist, wird damit die
+  %      Hauptsprache überschrieben.
+  %    - sonst: Englisch
+  % 3. Die Sprache, in der ein Text(abschnitt) tatsächlich geschrieben
+  % ist. Beispielsweise kann ein Dokument mit der Zielsprache Deutsch
+  % durchaus im Text englischsprachige Wörter oder Sätze enthalten.
+  
 
+% Die gewählte Sprache (Deutsch oder Englisch) wird entweder per Packageoption (de,en)
+% oder über das Macro \selectedbeamerlanguage übergeben.
+% Dabei hat das Macro Vorrang.
+% Wenn keine Sprache gewählt wird, erzeugt das Package eine Warnung.
 }
 
 \ExplSyntaxOn
