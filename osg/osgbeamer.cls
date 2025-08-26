@@ -191,7 +191,7 @@
     \PassOptionsToClass{continuation=#1}{osgbeamerref}
   },
   docid.code = {
-    \PassOptionsToPackage{docid=#1}{osgbeamerref}
+    \PassOptionsToClass{docid=#1}{osgbeamerref}
   },
   % Eine Standalone-Präsentation ist nicht Teil einer Serie
   standalone.code = {
@@ -894,7 +894,7 @@
 %   \NewDocumentCommand\outline{D<>{all}+m}{\alt<#1>{\underline{#2}}{#2}}
 % }
 %\mode<presentation>{
-  \NewDocumentCommand\outline{D<>{all}+m}{\alt<#1>{\highLight{#2}}{\highLight[bg]{#2}}} % Die phantom \highLight[bg]-Version sorgt für
+  \NewDocumentCommand\outline{D<>{all}+m}{\alt<#1>{\highLight{#2}}{\highLight[white]{#2}}} % Die white-Version sorgt für
   % identische Abstände.
   % ToDo: \highLight anpassen, dass der Durchschuss nicht geändert wird.
 %}
@@ -966,10 +966,10 @@
 }
 
 
-\newenvironment<>{twocolumns}[1][t,0.5]{%
+\newenvironment<>{twocolumns}[1][t,0.475]{%
   \twocolparam{#1}% 
-  \setlength{\osgleftcolwid}{\fpeval{\osgtcfcwid*0.975}\textwidth}%
-  \setlength{\osgrightcolwid}{0.975\textwidth}%
+  \setlength{\osgleftcolwid}{\fpeval{\osgtcfcwid*0.95}\textwidth}%
+  \setlength{\osgrightcolwid}{0.95\textwidth}%
   \addtolength{\osgrightcolwid}{-\osgtcfcwid\textwidth}%
   \alt#2{\def\nextcolumn{\column{\osgrightcolwid}}}{\def\nextcolumn{\par}}%
   \begin{columns}#2[\osgtcalignparam]\column{\osgleftcolwid}%

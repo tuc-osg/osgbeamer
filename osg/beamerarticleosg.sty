@@ -219,21 +219,9 @@
 \defbeamertemplate<article>*{definition}{block}{}[action]{
   \RenewDocumentEnvironment{definition}{o}{%
     \begin{savenotes}%
+    \stepcounter{theorem}%
     \def\insertblocktitle{\textbf{Definition~\thetheorem}%
       \IfNoValueF{##1}{~(##1)}}%
-    \refstepcounter{theorem}%
-    \usebeamertemplate{theorem begin}%
-  }{
-    \usebeamertemplate{theorem end}%
-    \end{savenotes}
-  }
-}
-\defbeamertemplate<article>{theorem}{block}{}[action]{
-  \RenewDocumentEnvironment{theorem}{o}{%
-    \begin{savenotes}%
-    \def\insertblocktitle{\textbf{Theorem~\thetheorem}%
-      \IfNoValueF{##1}{~(##1)}}%
-    \refstepcounter{theorem}%
     \usebeamertemplate{theorem begin}%
   }{
     \usebeamertemplate{theorem end}%
