@@ -25,6 +25,7 @@ hyperref
 %
 \providebool{osgoptionstandalone}
 \providebool{osgscript}
+\providebool{noexport}
 \DeclareKeys[osgbeamer]{
   standalone.code = {
     \booltrue{osgoptionstandalone}
@@ -95,6 +96,9 @@ hyperref
   },
   doctype.code:n = {
     \providecommand\omr@doctype{#1}
+  },
+  noexport.code:n={
+    \booltrue{noexport}
   }
 } 
 \ExplSyntaxOff
@@ -486,7 +490,7 @@ hyperref
    }
 
    \newcommand<>{\osglabel}[1]{\beamer@savemode\only#2{\zref@label{#1}}\beamer@resumemode}
-
+   %\let\osglabel\label
    % Definiere \omrcpath als den Dateienpfad (ohne Extension) für das angegebene Kapitel
    \NewDocumentCommand\getPathForChapter{om}{%
      \IfNoValueF{\xdef\omr@doctypecode{#1}}
@@ -522,11 +526,15 @@ hyperref
      % (referenzierten) aux-Dateien gelesen werden.
      \omr@readref
    }
-   \AddToHook{enddocument/afteraux}{
-     % ggf. muss die gref-Datei angepasst werden.
-     % Da darin auch die Nummer der letzten Seite/Folie übergeben wird, erfolgt dies
-     % erst zu Ende der Dokumentverarbeitung
-     \omr@writeref{\beamer@currentlecturelabel}
+   % Bei noexport erfolgt *keine* Anpassung der gref-Datei. Sie wir nur gelesen
+   % und deshalb können extern Referenzen genutzt werden.
+   \ifbool{noexport}{}{
+         \AddToHook{enddocument/afteraux}{
+           % ggf. muss die gref-Datei angepasst werden.
+           % Da darin auch die Nummer der letzten Seite/Folie übergeben wird, erfolgt dies
+           % erst zu Ende der Dokumentverarbeitung
+           \omr@writeref{\beamer@currentlecturelabel}
+         }
    }
 
   \NewDocumentCommand\omr@continuationwarning{}{
@@ -559,7 +567,7 @@ hyperref
     \ifx\beamer@nexttoken\article\let\next=\beamer@stopoutsidemode\fi%
     \ifx\beamer@nexttoken\mode\let\next=\beamer@stopoutsidemode\fi%
     \ifx\beamer@nexttoken\common\let\next=\beamer@stopoutsidemode\fi%
-    \ifx\beamer@nexttoken\label\let\next=\beamer@stopoutsidemode\fi% neu!
+    %\ifx\beamer@nexttoken\label\let\next=\beamer@stopoutsidemode\fi% neu!
     \ifx\beamer@nexttoken\presentation\let\next=\beamer@stopoutsidemode\fi%
     %\ifx\beamer@nexttoken\markcategory\let\next=\beamer@stopoutsidemode\fi% neu!
     \ifx\beamer@nexttoken\begin\let\next=\beamer@checkbeginframe\fi%

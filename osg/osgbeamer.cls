@@ -207,6 +207,10 @@
     \boolfalse{osgllm}
     \ClassInfo{\classname}{OLLM disabled or not detected, deactivate OLLM features}
   },
+  % Workaround für Cover
+  noexport.code = {
+    \PassOptionsToPackage{noexport}{osgbeamerref}
+  },
   % Optionen, die sinnvolle Einstellungen für die OSG zusammenfassen
   osgdefaults.code = {
     \PassOptionsToPackage{fakcolor=if,latexfonts}{beamerthemetuc2019}
