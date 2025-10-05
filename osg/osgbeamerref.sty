@@ -20,9 +20,14 @@ hyperref
   #4%
   \fi%
 }
-% Quick fix:
-\providecommand\ltx@label{}
-%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% WARNUNG
+% Dieser Code ist z.T. stark von Interna der Beamer-Klasse abhängig und damit
+% anfällig für Versionsänderungen.
+% Für künftige Versionen ist geplant, auf zref zu verzichten und alles über die
+% Mechanismen von Hyperref laufen zu lassen, die in Beamer (und ltx-talk)
+% bereits berücksichtigt werden
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \providebool{osgoptionstandalone}
 \providebool{osgscript}
 \providebool{noexport}
@@ -35,8 +40,8 @@ hyperref
     \providecommand{\missingref}{??}
   },
 }
-
 % Erweiterter LaTeX3-Syntax, vgl. Kommentar in osgbeamer.cls
+% Todo: Geht z.T. jetzt auch so, überarbeiten.
 \ExplSyntaxOn
 \cs_generate_variant:Nn \keys_set:nn { nx }
 \let\SetKeyEx=\keys_set:nx
@@ -492,12 +497,6 @@ hyperref
      }
    }
 
-   %\newcommand<>{\osglabel}[1]{\beamer@savemode\only#2{\zref@label{#1}}\beamer@resumemode}
-   %\newcommand<>{\osglabel}[1]{\beamer@savemode\beamer@resumemode}
-   \def\osglabel#1{
-     \relax\typeout{**** label \meaning\beamer@tmp 
-     }
-   }
    % Definiere \omrcpath als den Dateienpfad (ohne Extension) für das angegebene Kapitel
    \NewDocumentCommand\getPathForChapter{om}{%
      \IfNoValueF{\xdef\omr@doctypecode{#1}}
@@ -513,31 +512,11 @@ hyperref
    }
 
    \AddToHook{begindocument}{
-     % \label und \ref werden auf die entsprechenden Pendants gesetzt, die zref
-     % benutzen. 
-     % ACHTUNG: das kann (in anderen Paketen) zu Inkompatibilitäten
-     % führen
-     %\let\ref=\xref
-     %\let\label=\osglabel
-     % Verschiedene Pakete (insbesondere hyperref und amsmath) definieren \label
-     % um. Daher wird hier auch \ltx@label ersetzt, das von
-     % diesem Paketen gerufen wird.
-     % Workarround, da ltx@label in aktuellen packages nicht mehr verwendet wird. 
-     %\ifdefined\ltx@label
-     %\RenewDocumentCommand{\ltx@label}{m}{%
-       %\beamer@savemode
-      %\zref@label{#1}%
-       %\beamer@resumemode
-     %}
-     % \fi
      % Zu diesem Zeitpunkt ist die aux-Datei schon eingelesen.
      % Für die Crossreferenzierung müssen auch die anderen
      % (referenzierten) aux-Dateien gelesen werden.
      %\typeout{************ PATCH LABEL}
      \omr@readref
-     %\glet\label\osglabel
-     %\let\foo\osglabel
-     %\typeout{\meaning\label}
    }
    % Bei noexport erfolgt *keine* Anpassung der gref-Datei. Sie wir nur gelesen
    % und deshalb können extern Referenzen genutzt werden.
@@ -558,56 +537,48 @@ hyperref
       tex the previous one.
     }
   }
-  \let\beamer@processline@orig\beamer@processline
+  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  % Label
+  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  % Es sieht so aus, als ob in der neuen Version \label von Beamer permanent neu
+  % umgebogen wird. Daher definieren wir im Gegenzug \beamer@label um und rufen
+  % von hier \zref@label auf.
+  \RenewDocumentCommand{\beamer@label}{R<>{1} m}{%
+    \alt<#1>{\xdef\@currentHref{#2}\beamer@origlabel{#2}\zref@label{#2}\beamer@nameslide{#2}}{\beamer@dummynameslide}
+  }
+  \RenewDocumentCommand{\beamer@label@in@display}{R<>{1} m}{%
+    \alt<#1>{\xdef\@currentHref{#2}\zref@label{#2}\beamer@origlabel@in@display{#2}\beamer@nameslide{#2}}{\beamer@dummynameslide}
+  }
+  
+  % Wir wollen auch im presentation-Mode auf Abschnitte etc. referenzieren
+  % können. Jedoch verhindert Beamer, dass das \label-Macro "wahrgenommen" wird.
+  % Deshalb wird beamer@treat aus beamerbasemodes.sty gepatcht, um Abschnittslabel
+  % für Slides/Handouts zu ermöglichen
+  \newcommand{\osgpatchlabel}{%
+    \patchcmd\beamer@treat{\fi\next}{%
+      \fi%
+      \ifx\beamer@nexttoken\label\let\oldnext=\next\let\next=\osg@parselabel\fi%
+      \next%
+    }{\PackageInfo{osgbeamerref}{Patch beamer label}%
+    }{\PackageWarningNoLine{osgbeamerref}{Couldn't patch beamer label}%
+    }
+  }
   \begingroup
-  \catcode`\^^M=12\relax % ^^M wird "other" (12), wie im Original
-  \long\gdef\beamer@processline#1{%
-    \typeout{***********processline #1}%
-    \beamer@processline@orig#1^^M%
+  \endlinechar=-1\relax%
+  \gdef\osg@parselabel#1{%
+    \zref@label{#1}%
+    \beamer@modeoutsideframe
   }
-    % 
   \endgroup
-  \typeout{*********** PATCH???}
-  \mode<presentation>{
+  \AddToHook{begindocument/end}{
+    \mode<presentation>{%
+      \osgpatchlabel%
+    }
   }
-           %           Wir wollen auch im presentation-Mode auf Abschnitte etc. referenzieren
-    % können. Jedoch verhindert Beamer, dass das \label-Macro "wahrgenommen" wird.
-    % Deshalb wird beamer@treat aus beamerbasemodes.sty überschrieben, um Abschnittslabel
-    % für Slides/Handouts zu ermöglichen
-  % \def\beamer@treat{%
-  %   \ifx\beamer@nexttoken\frame\let\next=\beamer@stopoutsidemode\fi%
-  %   \ifx\beamer@nexttoken\lecture\let\next=\beamer@stopoutsidemode\fi%
-  %   \ifx\beamer@nexttoken\note\let\next=\beamer@stopoutsidemode\fi%
-  %   \ifx\beamer@nexttoken\appendix\let\next=\beamer@stopoutsidemode\fi%
-  %   %\ifx\beamer@nexttoken\lde\let\next=\beamer@stopoutsidemode\fi%
-  %   %\ifx\beamer@nexttoken\len\let\next=\beamer@stopoutsidemode\fi%
-  %   %\ifx\beamer@nexttoken\langall\let\next=\beamer@stopoutsidemode\fi%
-  %   \ifx\beamer@nexttoken\againframe\let\next=\beamer@stopoutsidemode\fi%
-  %   \ifx\beamer@nexttoken\section\let\next=\beamer@stopoutsidemode\fi%
-  %   \ifx\beamer@nexttoken\subsection\let\next=\beamer@stopoutsidemode\fi%
-  %   \ifx\beamer@nexttoken\subsubsection\let\next=\beamer@stopoutsidemode\fi%
-  %   \ifx\beamer@nexttoken\part\let\next=\beamer@stopoutsidemode\fi%
-  %   \ifx\beamer@nexttoken\article\let\next=\beamer@stopoutsidemode\fi%
-  %   \ifx\beamer@nexttoken\mode\let\next=\beamer@stopoutsidemode\fi%
-  %   \ifx\beamer@nexttoken\common\let\next=\beamer@stopoutsidemode\fi%
-  %   %\ifx\beamer@nexttoken\label\let\next=\beamer@stopoutsidemode\fi% neu!
-  %   \ifx\beamer@nexttoken\label\let\next=\beamer@stopcommon\fi% neu!
-  %   \ifx\beamer@nexttoken\presentation\let\next=\beamer@stopoutsidemode\fi%
-  %   %\ifx\beamer@nexttoken\markcategory\let\next=\beamer@stopoutsidemode\fi% neu!
-  %   \ifx\beamer@nexttoken\begin\let\next=\beamer@checkbeginframe\fi%
-  %   \ifx\beamer@nexttoken\end\let\next=\beamer@checkenddoc\fi%
-  %   \next}
-  %
-  % }
-
   \IfBool{osglegacy}{
     \NewCSDeprecatedCommand{osgexternaldocumentforce}{m m}{}[use\MessageBreak
     '\string\xarticleref' or '\string\xpresentationref', respectively,] 
-  }  
-
-  % \g@addto@macro\beamer@lastminutepatches{
-  %   \def\label\osglabel
-  %   }
+  }
 
 } % Ende für OLLM (und nicht 'standalone')
 
