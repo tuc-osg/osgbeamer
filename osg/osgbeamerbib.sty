@@ -11,6 +11,7 @@
 %\newbool{osgstandalone}\boolfalse{osgstandalone}
 %\RequirePackage{enumitem}
 
+\typeout{**** OSGBib}
 \NewDocumentCommand\MakeCitation{m}{\MakeCitationAlpha{#1}}
 %\RenewDocumentCommand\MakeCitation{m}{\MakeCitationPlain{#1}}
 \ExplSyntaxOn
@@ -101,13 +102,13 @@
 %% ToDo: Das sollte künfig schon ein den Key möglich sein.
 \IfBool{osgoptionstandalone}{
   \IfBool{osgbibglobal}{
-    \PackageError{\packagename}{You can't have a global bibliography\\MessageBreak in
+    \PackageError{\packagename}{You can't have a global bibliography\MessageBreak in
       standalone mode}{Use 'bib=local' or disable 'standalone'}
   }{}
 }{}
 \ifdef{\obb@bibfile}{
   \IfBool{osgusebib}{}{
-    \PackageWarningNoLine{\packagename}{Bibliography disabled,\\MessageBreak bib file '\obb@bibfile' ignored}
+    \PackageWarningNoLine{\packagename}{Bibliography disabled,\MessageBreak bib file '\obb@bibfile' ignored}
   }
 }{
   \IfBool{osgusebib}{
@@ -129,6 +130,13 @@
 
 \IfBool{osgusebib}{
   \RequirePackage{librarian}
+  \NewDocumentCommand{\writecitefile}{m}{
+    \luaexec{
+      if (osgcitefile) then
+      osgcitefile:write(\luastring{#1})
+      end
+    }
+  }
   \IfBool{osgbibglobal}{
     \gdef\osb@glcitefile{\OsgShareDataPath/\obb@bibfile.lbc}
     % Wenn es bereits ein globales Citefile gibt, wird es am Dokumentanfang eingelesen
@@ -145,13 +153,6 @@
       % Das Citefile wird zum Schreiben geöffnet.
       \luaexec{
         osgcitefile = io.open("\osb@glcitefile","a+")
-      }
-    }
-    \NewDocumentCommand{\writecitefile}{m}{
-      \luaexec{
-        if (osgcitefile) then
-          osgcitefile:write(\luastring{#1})
-        end
       }
     }
   }{
