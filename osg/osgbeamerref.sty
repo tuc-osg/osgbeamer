@@ -334,7 +334,8 @@ hyperref
      getexternal = function(file,reflist)
         %for key, info in pairs(reflist) do
         %   tex.print("\\typeout{*********** IN REFLIST: ".. key .. "} ")
-        %end
+        %   end
+        %tex.print("\\typeout{***** Look for >"..file.."<}")
         local f=io.open(file,"r")
         local foundcont = 0
         if (f == nil) then
@@ -515,7 +516,11 @@ hyperref
      % Zu diesem Zeitpunkt ist die aux-Datei schon eingelesen.
      % Für die Crossreferenzierung müssen auch die anderen
      % (referenzierten) aux-Dateien gelesen werden.
-     %\typeout{************ PATCH LABEL}
+     % \typeout{************ PATCH LABEL}
+     \mode<article>{
+       \glet\osglabel=\zlabel
+       \glet\label=\zlabel
+     }
      \omr@readref
    }
    % Bei noexport erfolgt *keine* Anpassung der gref-Datei. Sie wir nur gelesen
@@ -543,38 +548,40 @@ hyperref
   % Es sieht so aus, als ob in der neuen Version \label von Beamer permanent neu
   % umgebogen wird. Daher definieren wir im Gegenzug \beamer@label um und rufen
   % von hier \zref@label auf.
-  \RenewDocumentCommand{\beamer@label}{R<>{1} m}{%
-    \alt<#1>{\xdef\@currentHref{#2}\beamer@origlabel{#2}\zref@label{#2}\beamer@nameslide{#2}}{\beamer@dummynameslide}
-  }
-  \RenewDocumentCommand{\beamer@label@in@display}{R<>{1} m}{%
-    \alt<#1>{\xdef\@currentHref{#2}\zref@label{#2}\beamer@origlabel@in@display{#2}\beamer@nameslide{#2}}{\beamer@dummynameslide}
-  }
-  
-  % Wir wollen auch im presentation-Mode auf Abschnitte etc. referenzieren
-  % können. Jedoch verhindert Beamer, dass das \label-Macro "wahrgenommen" wird.
-  % Deshalb wird beamer@treat aus beamerbasemodes.sty gepatcht, um Abschnittslabel
-  % für Slides/Handouts zu ermöglichen
-  \newcommand{\osgpatchlabel}{%
-    \patchcmd\beamer@treat{\fi\next}{%
-      \fi%
-      \ifx\beamer@nexttoken\label\let\oldnext=\next\let\next=\osg@parselabel\fi%
-      \next%
-    }{\PackageInfo{osgbeamerref}{Patch beamer label}%
-    }{\PackageWarningNoLine{osgbeamerref}{Couldn't patch beamer label}%
+  \mode<beamer>{
+    \RenewDocumentCommand{\beamer@label}{R<>{1} m}{%
+      \alt<#1>{\xdef\@currentHref{#2}\beamer@origlabel{#2}\zref@label{#2}\beamer@nameslide{#2}}{\beamer@dummynameslide}
     }
-  }
-  \begingroup
-  \endlinechar=-1\relax%
-  \gdef\osg@parselabel#1{%
-    \zref@label{#1}%
-    \beamer@modeoutsideframe
-  }
-  \endgroup
-  \AddToHook{begindocument/end}{
-    \mode<presentation>{%
-      \osgpatchlabel%
+    \RenewDocumentCommand{\beamer@label@in@display}{R<>{1} m}{%
+      \alt<#1>{\xdef\@currentHref{#2}\zref@label{#2}\beamer@origlabel@in@display{#2}\beamer@nameslide{#2}}{\beamer@dummynameslide}
     }
-  }
+    
+    % Wir wollen auch im presentation-Mode auf Abschnitte etc. referenzieren
+    % können. Jedoch verhindert Beamer, dass das \label-Macro "wahrgenommen" wird.
+    % Deshalb wird beamer@treat aus beamerbasemodes.sty gepatcht, um Abschnittslabel
+    % für Slides/Handouts zu ermöglichen
+    \newcommand{\osgpatchlabel}{%
+      \patchcmd\beamer@treat{\fi\next}{%
+        \fi%
+        \ifx\beamer@nexttoken\label\let\oldnext=\next\let\next=\osg@parselabel\fi%
+        \next%
+      }{\PackageInfo{osgbeamerref}{Patch beamer label}%
+      }{\PackageWarningNoLine{osgbeamerref}{Couldn't patch beamer label}%
+     }
+   }
+   \begingroup
+      \endlinechar=-1\relax%
+      \gdef\osg@parselabel#1{%
+        \zref@label{#1}%
+        \beamer@modeoutsideframe
+      }
+   \endgroup
+   \AddToHook{begindocument/end}{
+     \mode<presentation>{%
+       \osgpatchlabel%
+      }
+   }
+ }
   \IfBool{osglegacy}{
     \NewCSDeprecatedCommand{osgexternaldocumentforce}{m m}{}[use\MessageBreak
     '\string\xarticleref' or '\string\xpresentationref', respectively,] 
