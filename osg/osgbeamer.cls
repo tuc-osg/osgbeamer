@@ -108,7 +108,7 @@
            end   
            v = string.match(line,"$shared_data_dir%s-=%s-(%S-);")
            if v ~= nil then
-              sh_path = v
+              sh_path = v:match([[^(['"])(.*)%1$]])
            end   
         end
         -- \ollm dient als Hook für verschiedene OLLM-spezifische Macros
