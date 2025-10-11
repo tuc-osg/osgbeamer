@@ -548,7 +548,7 @@ hyperref
   % Es sieht so aus, als ob in der neuen Version \label von Beamer permanent neu
   % umgebogen wird. Daher definieren wir im Gegenzug \beamer@label um und rufen
   % von hier \zref@label auf.
-  \mode<beamer>{
+  \mode<presentation>{
     \RenewDocumentCommand{\beamer@label}{R<>{1} m}{%
       \alt<#1>{\xdef\@currentHref{#2}\beamer@origlabel{#2}\zref@label{#2}\beamer@nameslide{#2}}{\beamer@dummynameslide}
     }
