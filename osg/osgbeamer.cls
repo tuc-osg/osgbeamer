@@ -668,6 +668,12 @@
     \thesection.\arabic{subsection}
   }  %% TODO: Appendix
 }
+% Korrektur bei der Sternvariante in section
+\def\osgbeamerssection{%
+  \addtocounter{section}{-1}%
+  \beamer@@ssection%
+}
+\def\beamer@@section{\@ifnextchar*\osgbeamerssection\beamer@@@section}
 
 % Hook zum Ausführen nach dem Titel
 \RequirePackage{apptools}
