@@ -35,7 +35,7 @@ use feature 'signatures','lexical_subs','switch';
 #no warnings 'experimental::signatures','experimental::smartmatch';
 use strict;
 use warnings;
-use version; our $VERSION = version->declare('0.11.1');
+use version; our $VERSION = version->declare('0.11.2');
 
 use File::Basename;
 use File::Copy;
@@ -292,6 +292,9 @@ sub publish(){
   }
   ($num, $topic) = lect_descr($doctype);
   ($num,$_) = curr_number($num);
+  if ($num < 0) {
+        $num = '_'.abs($num);
+  }
   if ($lang eq 'all') {
     @langs = ('de','en');
   } else {
@@ -323,6 +326,13 @@ sub publish(){
      ) {
     $patharrayref = $deploy_path{"$main::jobname"};
   }
+  # Override by file name
+  opendir my $hdir, '.';
+  my $rx = qr/\A\Q$lectureprefix\E-.*-\Q$doctype\E.*\.pdf/;
+  my ($matching) = grep { /$rx/ && -f $_ } readdir $hdir; # erstes Match
+  if ( ($matching) and (exists($deploy_path{"$matching"}))) {
+    $patharrayref = $deploy_path{"$matching"};
+  }
   ## Normalize hashes
   # single elements are converted to an array reference
   $patharrayref = [ $patharrayref ] if ref $patharrayref eq '';
@@ -338,9 +348,11 @@ sub publish(){
 	my $lang = $l;
 	my $deploy_file_name;
 	my $evalstr;
-	if ( !($main::jobname eq '') and (exists($deploy_file{"$main::jobname"}))) {
+	if ( ($matching) and (exists($deploy_file{"$matching"}))) {
+	  $evalstr = "\$deploy_file_name= \"$deploy_file{$matching}.pdf\"";
+	} elsif (!($main::jobname eq '') and (exists($deploy_file{"$main::jobname"}))) {
 	  $evalstr = "\$deploy_file_name= \"$deploy_file{$main::jobname}.pdf\"";
-	} else {
+	}  else {
 	  $evalstr = "\$deploy_file_name= \"$deploy_file{$doctype}.pdf\"";
 	}
 	eval $evalstr;
