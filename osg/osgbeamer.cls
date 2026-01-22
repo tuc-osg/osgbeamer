@@ -776,11 +776,12 @@
 % (entgegen der Doku) zwar per Default zu machen, zur Sicherheit wird
 % aber stets die entsprechende Option übergeben. Ein evtl. doppeltes
 % Vorkommen von 'frame' ist unkritisch, so dass das Argument nicht
-% untersucht werden muss. 
-\NewCommandCopy{\original@footnote}{\footnote}
-\RenewDocumentCommand{\footnote}{D<>{all} O{} +m}{%
-  \only<#1>{\original@footnote[#2]{#3}}%
-}
+% untersucht werden muss.
+
+%\NewCommandCopy{\original@footnote}{\footnote}
+%\RenewDocumentCommand{\footnote}{D<>{all} O{} +m}{%
+%  \only<#1>{\original@footnote[#2]{#3}}%
+%}
 
 %\RequirePackage{microtype}
 
