@@ -35,7 +35,7 @@ use feature 'signatures','lexical_subs','switch';
 #no warnings 'experimental::signatures','experimental::smartmatch';
 use strict;
 use warnings;
-use version; our $VERSION = version->declare('0.11.2');
+use version; our $VERSION = version->declare('0.11.3');
 
 use File::Basename;
 use File::Copy;
@@ -240,9 +240,11 @@ sub make_document {
   # We need TeX code to be executed *before* the actual document
   # '\DocumentMetadata' is needed if we do pdf tagging
   if ($lang eq "en") {
-    $main::pre_tex_code='\DocumentMetadata{pdfversion=1.7,lang=en-US}';
+    #$main::pre_tex_code='\DocumentMetadata{pdfversion=1.7,lang=en-US}';
+    $main::pre_tex_code='\RequirePackage{pdfmanagement}\SetKeys[document/metadata]{pdfversion=1.7,lang=en-US,xmp=false}';
   } else { # $lang should be 'de'
-    $main::pre_tex_code='\DocumentMetadata{pdfversion=1.7,lang=de-DE}';
+    $main::pre_tex_code='\RequirePackage{pdfmanagement}\SetKeys[document/metadata]{pdfversion=1.7,lang=de-DE,xmp=false}';
+    #$main::pre_tex_code='\DocumentMetadata{pdfversion=1.7,lang=de-DE}';
   }
   if ($number < 0) {
     $number = '_'.abs($number);
