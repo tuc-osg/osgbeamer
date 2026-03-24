@@ -17,13 +17,25 @@
 \fi
 \iftuc@roboto\relax\else
   \usefonttheme{professionalfonts}
-  \setmainfont{TeX Gyre Pagella} % 
-  \setsansfont{Source Sans Pro}[
+  \setmainfont{TeX Gyre Pagella} %
+  \IfFontExistsTF{Source Sans 3}
+  {
+    \setmainfont{Source Sans 3}[
     UprightFont    = *-Regular,
     BoldFont       = *-Semibold,
     ItalicFont     = *-Italic,
     BoldItalicFont = *-SemiboldIt
   ]
+  }{\IfFontExistsTF{Source Sans Pro}
+    {\setmainfont{Source Sans Pro}[
+      UprightFont    = *-Regular,
+      BoldFont       = *-Semibold,
+      ItalicFont     = *-Italic,
+      BoldItalicFont = *-SemiboldIt
+      ]
+    }{\PackageError{beamerfontthemeosg}
+        {No font 'Source Sans'  found, neither 'Source Sans Pro' nor 'Source Sans 3'}
+        {Please install or update font configuration}}}
 \fi
 \mode<all>
 
