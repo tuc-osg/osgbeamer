@@ -126,6 +126,12 @@
 \NewDocumentCommand\stringrg{ m m m}{%
   \str_range_ignore_spaces:Vnn{#1}{#2}{#3}%
 }
+\cs_new:Npn \stripspaces #1
+{
+  \str_tail_ignore_spaces:n{#1}%
+  %\tl_trim_spaces:n {#1}
+}
+
 \ExplSyntaxOff
 
 \IfBool{osgusebib}{
@@ -282,7 +288,7 @@
    \RenewDocumentCommand{\bibitem}{O{} m}{%
      \Cite{#2}{main}{%
      \item[\bibitemlabel{#2}] \MakeReferenceItem}{\item[#2] \emph{#2}\writecitefile{\string\nocite{#2}}}%
-     \IfBlankF{#1}{, #1}%
+     \IfBlankF{#1}{, #1}\conditionalstop%
    }
 
   \newcommand{\bibcomment}[2][\ldeen{Anm:}{rem:}]{%\vspace{-1.2ex}
@@ -414,9 +420,9 @@
          \fi%
      \fi%
      \stress<presentation>{:}\space
-     \compareentries%
-     \RetrieveFieldIn{entrytype}\temp%
-     \typesetref\temp%\conditionalstop
+     \compareentries% 
+     \RetrieveFieldIn{entrytype}{\temp}{}%
+     \typesetref{\temp}%{\conditionalstop}%
    }
    %%% These are for names in the bibliography.
    \def\makerefname{%
@@ -453,13 +459,13 @@
    %%% Here entries are defined.
    \def\typesetref#1{%
      \ifcsname#1@entrytype\endcsname
-         \csname#1@entrytype\endcsname
+           \csname#1@entrytype\endcsname%
      \else
          \errmessage{Unknown entry type: `#1'}%
-     \fi
+     \fi%
    }
    \def\createtype#1{%
-     \expandafter\def\csname#1@entrytype\endcsname
+     \expandafter\def\csname#1@entrytype\endcsname%
    }
    \def\booktitle#1{\setbooktitle{\RetrieveField{#1}}%
      \RetrieveFieldIn{series}\tempa\ifx\tempa\empty\relax\else%
@@ -498,7 +504,7 @@
      \booktitle{title}%
      \TypesetField{publisher}\addstop{}%
      \TypesetField{address}\addcomma{}%
-     \TypesetField{year}\addcomma{}%
+     \TypesetField{year}{\addcomma}{}%
    }%
    \createtype{article}{%
      \articletitle{title}%
